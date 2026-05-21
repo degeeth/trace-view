@@ -204,6 +204,204 @@
       align-items: stretch;
     }
     #altChart { width: 100% !important; }
+
+    /* ═══════════════════════════════════════════════
+       NAVIGATION MOBILE (cachée sur desktop)
+    ═══════════════════════════════════════════════ */
+    .mobile-nav { display: none; }
+    .mobile-tab-content { display: none; }
+
+    @media (max-width: 768px) {
+      /* Body scroll sur mobile */
+      body { overflow: auto; height: auto; }
+
+      /* Header compact */
+      header { padding: 10px 14px; flex-wrap: wrap; gap: 4px; }
+      header h1 { font-size: 1em; }
+      header span { font-size: 0.75em; display: block; width: 100%; }
+
+      /* Stats bar : 2 colonnes */
+      .stat { padding: 6px 12px; font-size: 0.78em; }
+      .stat strong { font-size: 1em; }
+
+      /* Layout : cacher les 2 colonnes desktop, afficher onglets */
+      .layout { display: none; }
+
+      /* Navigation onglets mobile */
+      .mobile-nav {
+        display: flex;
+        background: #fff;
+        border-bottom: 2px solid #e0e0e0;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        flex-shrink: 0;
+      }
+      .mobile-tab {
+        flex: 1;
+        padding: 11px 6px 9px;
+        text-align: center;
+        font-size: 0.8em;
+        font-weight: 700;
+        color: #888;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        transition: color .15s, border-color .15s;
+        background: none;
+        border-top: none;
+        border-left: none;
+        border-right: none;
+      }
+      .mobile-tab.active {
+        color: #2c3e50;
+        border-bottom-color: #2980b9;
+      }
+
+      /* Contenus onglets */
+      .mobile-tab-content { display: none; flex-direction: column; }
+      .mobile-tab-content.active { display: flex; }
+
+      /* Vue Carte */
+      #tab-carte { height: calc(100vh - 120px); }
+      #tab-carte #map-m {
+        flex: 1;
+        min-height: 0;
+      }
+      #tab-carte .chart-card-m {
+        flex: 0 0 185px;
+        background: #fff;
+        border-top: 1px solid #ddd;
+        display: flex;
+        flex-direction: column;
+      }
+      #tab-carte .card-title-m {
+        font-size: 0.82em;
+        font-weight: 700;
+        color: #2c3e50;
+        padding: 7px 12px 5px;
+        border-bottom: 1px solid #eee;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      #tab-carte .card-title-m .sel-info {
+        font-size: 0.78em;
+        font-weight: 400;
+        color: #2980b9;
+        font-style: italic;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 55%;
+      }
+      #tab-carte .chart-wrap-m {
+        flex: 1;
+        padding: 8px 10px 10px;
+      }
+      #altChartM { width: 100% !important; }
+
+      /* Vue Tableau */
+      #tab-tableau { height: calc(100vh - 120px); overflow: hidden; display: flex; flex-direction: column; }
+      .mobile-col-header {
+        font-size: 0.82em;
+        font-weight: 700;
+        color: #2c3e50;
+        padding: 8px 12px 6px;
+        border-bottom: 1px solid #eee;
+        flex-shrink: 0;
+      }
+      .filter-bar-m {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        padding: 8px 10px;
+        border-bottom: 1px solid #eee;
+        background: #fafafa;
+        flex-shrink: 0;
+      }
+      .filter-bar-m strong { font-size: 0.78em; color: #666; }
+      .filter-btn-m {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border: 2px solid transparent;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 0.72em;
+        font-weight: 700;
+        opacity: .4;
+        transition: opacity .15s, transform .1s;
+        user-select: none;
+      }
+      .filter-btn-m.active { opacity: 1; transform: translateY(-1px); box-shadow: 0 1px 5px rgba(0,0,0,.18); }
+      .filter-btn-m .badge { background: rgba(255,255,255,.28); border-radius: 10px; padding: 0 5px; }
+      .btn-vert-m   { background:#27ae60; color:#fff; border-color:#1e8449; }
+      .btn-orange-m { background:#e67e22; color:#fff; border-color:#ca6f1e; }
+      .btn-rouge-m  { background:#c0392b; color:#fff; border-color:#a93226; }
+      .btn-blanc-m  { background:#ecf0f1; color:#333; border-color:#bdc3c7; }
+      .btn-blanc-m .badge { background:rgba(0,0,0,.10); }
+      .btn-reset-m {
+        padding: 4px 10px;
+        border: 1px solid #ccc;
+        border-radius: 20px;
+        background: #fff;
+        color: #666;
+        font-size: .72em;
+        cursor: pointer;
+      }
+      #count-info-m { font-size:.72em; color:#999; }
+
+      .table-wrap-m { flex: 1; overflow-y: auto; overflow-x: auto; }
+      .tbl-m { border-collapse: collapse; width: 100%; font-size: .78em; }
+      .tbl-m thead th {
+        background: #2c3e50;
+        color: #fff;
+        padding: 8px 8px;
+        text-align: center;
+        white-space: nowrap;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        font-size: .75em;
+      }
+      .tbl-m tbody td {
+        padding: 7px 8px;
+        border-bottom: 1px solid #eee;
+        white-space: nowrap;
+        text-align: center;
+      }
+      .tbl-m tbody tr { cursor: pointer; }
+      .tbl-m tbody tr:nth-child(even) td { background: #f7f9fb; }
+      .tbl-m tbody tr:hover td { background: #e8f4fd !important; }
+      .tbl-m tbody tr.selected-m td { background: #d0eaff !important; outline: 1.5px solid #2980b9; }
+      .tbl-m tbody tr.hidden { display: none; }
+      .no-result-m { text-align:center; padding:16px; color:#bbb; font-style:italic; display:none; font-size:.82em; }
+
+      /* Bottom nav */
+      .bottom-nav-m {
+        display: flex;
+        background: #fff;
+        border-top: 1px solid #e0e0e0;
+        padding: 8px 0 env(safe-area-inset-bottom, 8px);
+        flex-shrink: 0;
+      }
+      .nav-item-m {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        font-size: 0.72em;
+        color: #999;
+        cursor: pointer;
+        padding: 2px 0;
+      }
+      .nav-item-m.active { color: #2980b9; }
+      .nav-item-m i { font-size: 20px; }
+    }
   </style>
 </head>
 <body>
@@ -532,5 +730,298 @@ function applyFilters() {
     : '';
 }
 </script>
+
+<!-- ═══════════════════════════════════════════════
+     NAVIGATION MOBILE
+═══════════════════════════════════════════════ -->
+<div class="mobile-nav" id="mobile-nav">
+  <button class="mobile-tab active" data-tab="carte" onclick="switchTab('carte')">🗺 Carte</button>
+  <button class="mobile-tab" data-tab="tableau" onclick="switchTab('tableau')">📋 Côtes</button>
+</div>
+
+<!-- Onglet Carte (carte + profil) -->
+<div class="mobile-tab-content active" id="tab-carte">
+  <div style="position:relative;flex:1;min-height:0;">
+    <div class="card-title-m" style="position:absolute;top:0;left:0;right:0;z-index:500;background:rgba(255,255,255,.93);">
+      🗺 Tracé du parcours
+      <span class="sel-info" id="map-info-m"></span>
+    </div>
+    <div id="map-m" style="position:absolute;inset:0;"></div>
+  </div>
+  <div class="chart-card-m">
+    <div class="card-title-m">
+      📈 Profil altimétrique
+      <span class="sel-info" id="chart-info-m"></span>
+    </div>
+    <div class="chart-wrap-m">
+      <canvas id="altChartM"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Onglet Tableau -->
+<div class="mobile-tab-content" id="tab-tableau">
+  <div class="mobile-col-header">📋 Tableau des côtes <span style="font-weight:400;color:#888;font-size:.85em">— tap pour voir sur la carte</span></div>
+  <div class="filter-bar-m">
+    <strong>Filtrer :</strong>
+    <button class="filter-btn-m btn-vert-m"   data-filter="vert"   onclick="toggleFilterM(this)">● Vert <span class="badge">18</span></button>
+    <button class="filter-btn-m btn-orange-m" data-filter="orange" onclick="toggleFilterM(this)">● Orange <span class="badge">4</span></button>
+    <button class="filter-btn-m btn-rouge-m"  data-filter="rouge"  onclick="toggleFilterM(this)">● Rouge <span class="badge">2</span></button>
+    <button class="filter-btn-m btn-blanc-m"  data-filter="blanc"  onclick="toggleFilterM(this)">● &lt;4% <span class="badge">20</span></button>
+    <button class="btn-reset-m" onclick="resetFiltersM()">✕</button>
+    <span id="count-info-m"></span>
+  </div>
+  <div class="table-wrap-m">
+    <table class="tbl-m" id="climbs-body-m-wrap">
+      <thead>
+        <tr>
+          <th>N°</th><th>Km dép.</th><th>Dist.</th><th>Dénivelé</th><th>Alt. S.</th>
+        </tr>
+      </thead>
+      <tbody id="climbs-body-m"></tbody>
+    </table>
+    <p class="no-result-m" id="no-result-m">Aucune côte trouvée.</p>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// MOBILE : initialisation conditionnelle
+// ═══════════════════════════════════════════════════
+const isMobile = () => window.innerWidth <= 768;
+
+// Carte mobile
+let mapM = null;
+let mainPolylineM = null;
+let highlightLayerM = null;
+let highlightMarkerSM = null;
+let highlightMarkerEM = null;
+let altChartMInst = null;
+let climbAnnotationM = null;
+let selectedRowM = null;
+const activeFiltersM = new Set();
+
+function initMobile() {
+  if (mapM) return;
+
+  // Carte
+  mapM = L.map('map-m').setView([50.1822, 5.6751], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 18
+  }).addTo(mapM);
+  mainPolylineM = L.polyline(allPoints, { color: '#2980b9', weight: 3, opacity: .9 }).addTo(mapM);
+  mapM.fitBounds(mainPolylineM.getBounds(), { padding: [30, 30] });
+
+  const mkS2 = L.divIcon({ html:'<div style="background:#27ae60;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 2px 5px rgba(0,0,0,.4)">▶</div>', className:'', iconAnchor:[11,11] });
+  const mkE2 = L.divIcon({ html:'<div style="background:#c0392b;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 2px 5px rgba(0,0,0,.4)">■</div>', className:'', iconAnchor:[11,11] });
+  L.marker(allPoints[0], {icon: mkS2}).addTo(mapM).bindPopup('<b>Départ</b>');
+  L.marker(allPoints[allPoints.length-1], {icon: mkE2}).addTo(mapM).bindPopup('<b>Arrivée</b>');
+
+  // Profil
+  const ctxM = document.getElementById('altChartM').getContext('2d');
+  altChartMInst = new Chart(ctxM, {
+    type: 'line',
+    data: {
+      labels: chartKm,
+      datasets: [
+        {
+          label: 'Altitude (m)', data: chartEle,
+          fill: true, backgroundColor: 'rgba(39,174,96,0.18)',
+          borderColor: '#27ae60', borderWidth: 1.5, pointRadius: 0, tension: 0.3, order: 2
+        },
+        {
+          label: 'Côte', data: [], fill: false,
+          borderColor: '#e74c3c', borderWidth: 2.5, pointRadius: 0, tension: 0.3, order: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        customShadeM: true,
+        tooltip: { callbacks: { title: i => i[0].label + ' km', label: i => ' ' + i.raw + ' m' } }
+      },
+      scales: {
+        x: { type: 'linear', min: 0, max: chartKm[chartKm.length-1],
+             title: { display: false },
+             ticks: { maxTicksLimit: 8, callback: v => v + ' km', font: { size: 9 } } },
+        y: { ticks: { callback: v => v + 'm', font: { size: 9 } } }
+      }
+    }
+  });
+
+  // Plugin ombre mobile
+  Chart.register({
+    id: 'customShadeM',
+    beforeDatasetsDraw(chart) {
+      if (chart.canvas.id !== 'altChartM' || !climbAnnotationM) return;
+      const { ctx, scales } = chart;
+      const x1 = scales.x.getPixelForValue(climbAnnotationM.startKm);
+      const x2 = scales.x.getPixelForValue(climbAnnotationM.endKm);
+      ctx.save();
+      ctx.fillStyle = 'rgba(231,76,60,0.15)';
+      ctx.fillRect(x1, scales.y.top, x2 - x1, scales.y.bottom - scales.y.top);
+      ctx.restore();
+    },
+    afterDatasetsDraw(chart) {
+      if (chart.canvas.id !== 'altChartM' || !climbAnnotationM) return;
+      const { ctx, scales } = chart;
+      const x1 = scales.x.getPixelForValue(climbAnnotationM.startKm);
+      const x2 = scales.x.getPixelForValue(climbAnnotationM.endKm);
+      const yTop = scales.y.top, yBot = scales.y.bottom;
+      ctx.save();
+      ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 1.2; ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(x1, yTop); ctx.lineTo(x1, yBot); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x2, yTop); ctx.lineTo(x2, yBot); ctx.stroke();
+      ctx.restore();
+    }
+  });
+
+  // Remplir le tableau mobile depuis le tableau desktop
+  buildMobileTable();
+  setTimeout(() => { mapM.invalidateSize(); }, 200);
+}
+
+function buildMobileTable() {
+  const srcRows = document.querySelectorAll('#climbs-body tr');
+  const tbody = document.getElementById('climbs-body-m');
+  tbody.innerHTML = '';
+  srcRows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+    const cat = row.dataset.cat;
+    const startKm = row.dataset.startKm;
+    const endKm = row.dataset.endKm;
+    const startIdx = row.dataset.startIdx;
+    const endIdx = row.dataset.endIdx;
+    const num = cells[0].textContent;
+    const kmDep = cells[1].textContent;
+    const dist = cells[3].textContent;
+    const deniv = cells[4].innerHTML;
+    const altS = cells[6].textContent;
+
+    const tr = document.createElement('tr');
+    tr.dataset.cat = cat;
+    tr.dataset.startKm = startKm;
+    tr.dataset.endKm = endKm;
+    tr.dataset.startIdx = startIdx;
+    tr.dataset.endIdx = endIdx;
+    tr.onclick = function() { selectClimbM(this); };
+    tr.innerHTML = `<td>${num}</td><td>${kmDep}</td><td>${dist}</td><td>${deniv}</td><td>${altS}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// Sélection côte mobile
+function selectClimbM(row) {
+  if (selectedRowM === row) {
+    row.classList.remove('selected-m');
+    selectedRowM = null;
+    clearHighlightM();
+    return;
+  }
+  if (selectedRowM) selectedRowM.classList.remove('selected-m');
+  row.classList.add('selected-m');
+  selectedRowM = row;
+
+  const startIdx = parseInt(row.dataset.startIdx);
+  const endIdx = parseInt(row.dataset.endIdx);
+  const startKm = parseFloat(row.dataset.startKm);
+  const endKm = parseFloat(row.dataset.endKm);
+  const num = row.querySelector('td').textContent;
+  const label = `Côte #${num}`;
+
+  highlightOnMapM(startIdx, endIdx, label);
+  highlightOnChartM(startKm, endKm, label);
+
+  // Basculer vers l'onglet carte
+  switchTab('carte');
+}
+
+function clearHighlightM() {
+  if (highlightLayerM)   { mapM.removeLayer(highlightLayerM);   highlightLayerM = null; }
+  if (highlightMarkerSM) { mapM.removeLayer(highlightMarkerSM); highlightMarkerSM = null; }
+  if (highlightMarkerEM) { mapM.removeLayer(highlightMarkerEM); highlightMarkerEM = null; }
+  mainPolylineM.setStyle({ color: '#2980b9', opacity: .9, weight: 3 });
+  document.getElementById('map-info-m').textContent = '';
+  climbAnnotationM = null;
+  if (altChartMInst) { altChartMInst.data.datasets[1].data = []; altChartMInst.update('none'); }
+  document.getElementById('chart-info-m').textContent = '';
+}
+
+function highlightOnMapM(startIdx, endIdx, label) {
+  if (highlightLayerM)   { mapM.removeLayer(highlightLayerM);   highlightLayerM = null; }
+  if (highlightMarkerSM) { mapM.removeLayer(highlightMarkerSM); highlightMarkerSM = null; }
+  if (highlightMarkerEM) { mapM.removeLayer(highlightMarkerEM); highlightMarkerEM = null; }
+  const seg = allPoints.slice(startIdx, endIdx + 1);
+  highlightLayerM = L.polyline(seg, { color: '#e74c3c', weight: 5, opacity: .95 }).addTo(mapM);
+  const mkSH = L.divIcon({ html:'<div style="background:#e74c3c;color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;box-shadow:0 2px 4px rgba(0,0,0,.4);font-weight:700">S</div>', className:'', iconAnchor:[10,10] });
+  const mkEH = L.divIcon({ html:'<div style="background:#8e44ad;color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;box-shadow:0 2px 4px rgba(0,0,0,.4);font-weight:700">E</div>', className:'', iconAnchor:[10,10] });
+  highlightMarkerSM = L.marker(allPoints[startIdx], {icon: mkSH}).addTo(mapM);
+  highlightMarkerEM = L.marker(allPoints[endIdx],   {icon: mkEH}).addTo(mapM);
+  mapM.fitBounds(highlightLayerM.getBounds(), { padding: [40, 40], maxZoom: 15 });
+  document.getElementById('map-info-m').textContent = label;
+}
+
+function highlightOnChartM(startKm, endKm, label) {
+  climbAnnotationM = { startKm, endKm };
+  const segData = [];
+  for (let i = 0; i < allDist.length; i++) {
+    const d = allDist[i];
+    if (d >= startKm - 0.01 && d <= endKm + 0.01) segData.push({ x: d, y: allElevFull[i] });
+  }
+  altChartMInst.data.datasets[1].data = segData;
+  altChartMInst.update('none');
+  document.getElementById('chart-info-m').textContent = label;
+}
+
+// Filtres mobile
+function toggleFilterM(btn) {
+  const cat = btn.dataset.filter;
+  if (activeFiltersM.has(cat)) { activeFiltersM.delete(cat); btn.classList.remove('active'); }
+  else                          { activeFiltersM.add(cat);    btn.classList.add('active');    }
+  applyFiltersM();
+}
+
+function resetFiltersM() {
+  activeFiltersM.clear();
+  document.querySelectorAll('.filter-btn-m').forEach(b => b.classList.remove('active'));
+  applyFiltersM();
+}
+
+function applyFiltersM() {
+  const rows = document.querySelectorAll('#climbs-body-m tr');
+  let visible = 0;
+  rows.forEach(row => {
+    const show = activeFiltersM.size === 0 || activeFiltersM.has(row.dataset.cat);
+    row.classList.toggle('hidden', !show);
+    if (show) visible++;
+    if (!show && row === selectedRowM) { selectedRowM = null; clearHighlightM(); }
+  });
+  document.getElementById('no-result-m').style.display = visible === 0 ? 'block' : 'none';
+  const info = document.getElementById('count-info-m');
+  info.textContent = activeFiltersM.size > 0 ? visible + ' côte' + (visible>1?'s':'') : '';
+}
+
+// Onglets mobile
+function switchTab(tab) {
+  document.querySelectorAll('.mobile-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.mobile-tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'carte') { setTimeout(() => mapM && mapM.invalidateSize(), 50); }
+}
+
+// Init au chargement si mobile
+if (isMobile()) {
+  document.addEventListener('DOMContentLoaded', initMobile);
+  window.addEventListener('load', initMobile);
+}
+window.addEventListener('resize', () => {
+  if (isMobile() && !mapM) initMobile();
+});
+</script>
+
 </body>
 </html>
