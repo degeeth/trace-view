@@ -405,6 +405,14 @@
       .nav-item-m.active { color: #2980b9; }
       .nav-item-m i { font-size: 20px; }
     }
+    /* ── Mini-profil au survol ── */
+    #mini-profile { position:fixed; display:none; background:#fff; border:0.5px solid #ddd; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.15); padding:8px 10px 6px; z-index:9999; pointer-events:none; width:220px; }
+    #mini-profile .mp-title { font-size:11px; font-weight:700; color:#2c3e50; margin:0 0 4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #mini-profile .mp-stats { display:flex; gap:8px; margin-bottom:5px; }
+    #mini-profile .mp-stat { display:flex; flex-direction:column; font-size:10px; }
+    #mini-profile .mp-stat span:first-child { color:#888; }
+    #mini-profile .mp-stat span:last-child  { font-weight:700; color:#2c3e50; }
+    #mp-canvas { width:100% !important; height:60px !important; display:block; }
   </style>
 </head>
 <body>
@@ -610,6 +618,37 @@ let traceMode = 'none'; // radio : aucun / pente / côtes
 let climbeAnnotations = []; // [{startKm, endKm, color, startIdx, endIdx}]
 let climbsMapLayer = null;
 
+
+// ═══════════════════════════════════════════════════
+// BADGES NUMÉROTÉS AU SOMMET DES CÔTES
+// ═══════════════════════════════════════════════════
+const climbBadgeLayer = L.layerGroup(); // pas ajouté à la carte par défaut
+
+function buildClimbBadges() {
+  climbBadgeLayer.clearLayers();
+  const allRows = document.querySelectorAll('#climbs-body tr');
+  allRows.forEach((row, i) => {
+    const cat   = row.dataset.cat;
+    const color = cat==='rouge' ? '#c0392b' : cat==='orange' ? '#e67e22' : cat==='vert' ? '#27ae60' : null;
+    if (!color) return;
+    const endIdx = parseInt(row.dataset.endIdx);
+    const num    = i + 1;
+    const pos    = allPoints[endIdx];
+    const icon   = L.divIcon({
+      html: `<div style="background:${color};color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.4);border:1.5px solid #fff;cursor:pointer;">${num}</div>`,
+      className: '', iconAnchor: [10, 10]
+    });
+    const m = L.marker(pos, { icon, zIndexOffset: 500 }).addTo(climbBadgeLayer);
+    m.on('click', () => {
+      // Faire défiler le tableau jusqu'à la ligne et la sélectionner
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      selectClimb(row);
+    });
+    m.bindTooltip(`Côte #${num}`, { permanent: false, direction: 'top', offset: [0, -12] });
+  });
+}
+buildClimbBadges();
+
 function buildClimbAnnotations() {
   if (climbeAnnotations.length) return;
   document.querySelectorAll('#climbs-body tr').forEach(row => {
@@ -672,6 +711,7 @@ function setTraceMode(mode) {
   }
   if (prev === 'climbs') {
     hideClimbsOnMap();
+    map.removeLayer(climbBadgeLayer);
     // tracé principal toujours visible en mode climbs → pas besoin de restaurer
   }
 
@@ -686,6 +726,8 @@ function setTraceMode(mode) {
     buildClimbAnnotations();
     // Garder le tracé bleu principal, ajouter les côtes colorées par-dessus
     showClimbsOnMap();
+    buildClimbBadges();
+    climbBadgeLayer.addTo(map);
   }
 
   // Toujours redessiner le profil (bandes côtes on/off)
@@ -1191,6 +1233,96 @@ function applyFilters() {
 }
 </script>
 
+<!-- mini-profile placeholder, real code below -->
+<script>
+// ═══════════════════════════════════════════════════
+// MINI-PROFIL AU SURVOL DU TABLEAU
+// ═══════════════════════════════════════════════════
+let mpChart = null;
+
+function showMiniProfile(row, mouseX, mouseY) {
+  const startIdx = parseInt(row.dataset.startIdx);
+  const endIdx   = parseInt(row.dataset.endIdx);
+  const startKm  = parseFloat(row.dataset.startKm);
+  const endKm    = parseFloat(row.dataset.endKm);
+  const num      = row.querySelector('td').textContent.trim();
+  const cat      = row.dataset.cat;
+  const color    = cat==='rouge' ? '#c0392b' : cat==='orange' ? '#e67e22' : cat==='vert' ? '#27ae60' : '#2980b9';
+
+  // Extraire les données du segment
+  const pts = allElevFull.slice(startIdx, endIdx + 1);
+  const kms = allDist.slice(startIdx, endIdx + 1).map(d => +(d - startKm).toFixed(3));
+  const dist = ((endKm - startKm) * 1000).toFixed(0);
+  const deni = (pts[pts.length-1] - pts[0]).toFixed(0);
+  const pct  = dist > 0 ? (deni / dist * 100).toFixed(1) : '0.0';
+  const top  = Math.max(...pts).toFixed(0);
+
+  document.getElementById('mp-title').textContent = 'Côte #' + num + '  (' + startKm.toFixed(2) + ' → ' + endKm.toFixed(2) + ' km)';
+  document.getElementById('mp-dist').textContent = dist + ' m';
+  document.getElementById('mp-deni').textContent = '+' + deni + ' m';
+  document.getElementById('mp-pct').textContent  = pct + ' %';
+  document.getElementById('mp-top').textContent  = top + ' m';
+
+  // Mini chart
+  const ctx = document.getElementById('mp-canvas').getContext('2d');
+  if (mpChart) mpChart.destroy();
+  mpChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: kms,
+      datasets: [{
+        data: pts,
+        borderColor: color,
+        borderWidth: 1.5,
+        backgroundColor: color + '22',
+        fill: true,
+        pointRadius: 0,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: false,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: {
+        x: { display: false },
+        y: { display: false, min: Math.min(...pts) - 5, max: Math.max(...pts) + 5 }
+      }
+    }
+  });
+
+  // Positionner la bulle
+  const el = document.getElementById('mini-profile');
+  el.style.display = 'block';
+  const W = window.innerWidth, H = window.innerHeight;
+  let lx = mouseX + 18, ly = mouseY - 20;
+  if (lx + 230 > W) lx = mouseX - 238;
+  if (ly + 160 > H) ly = mouseY - 155;
+  el.style.left = lx + 'px';
+  el.style.top  = ly + 'px';
+}
+
+function hideMiniProfile() {
+  document.getElementById('mini-profile').style.display = 'none';
+}
+
+// Attacher les événements aux lignes du tableau
+document.querySelectorAll('#climbs-body tr').forEach(row => {
+  row.addEventListener('mouseenter', (e) => showMiniProfile(row, e.clientX, e.clientY));
+  row.addEventListener('mousemove',  (e) => {
+    const el = document.getElementById('mini-profile');
+    if (el.style.display === 'none') return;
+    const W = window.innerWidth, H = window.innerHeight;
+    let lx = e.clientX + 18, ly = e.clientY - 20;
+    if (lx + 230 > W) lx = e.clientX - 238;
+    if (ly + 160 > H) ly = e.clientY - 155;
+    el.style.left = lx + 'px'; el.style.top = ly + 'px';
+  });
+  row.addEventListener('mouseleave', hideMiniProfile);
+});
+</script>
+
 <!-- ═══════════════════════════════════════════════
      NAVIGATION MOBILE
 ═══════════════════════════════════════════════ -->
@@ -1344,12 +1476,49 @@ function initMobile() {
       ctx.restore();
     }
   });
+  let mClimbsMapLayer = null;
+  let mClimbBadgeLayer = L.layerGroup();
+
+  function showClimbsOnMapM() {
+    if (mClimbsMapLayer) return;
+    buildClimbAnnotationsM();
+    // Récupérer startIdx/endIdx depuis le tableau
+    mClimbsMapLayer = L.layerGroup();
+    document.querySelectorAll('#climbs-body tr').forEach(row => {
+      const cat = row.dataset.cat;
+      const color = cat==='rouge'?'#c0392b':cat==='orange'?'#e67e22':cat==='vert'?'#27ae60':null;
+      if (!color) return;
+      const si = parseInt(row.dataset.startIdx), ei = parseInt(row.dataset.endIdx);
+      L.polyline(allPoints.slice(si, ei+1), { color, weight: 5, opacity: 0.9 }).addTo(mClimbsMapLayer);
+    });
+    mClimbsMapLayer.addTo(mapM);
+    // Badges numérotés
+    mClimbBadgeLayer.clearLayers();
+    document.querySelectorAll('#climbs-body tr').forEach((row, i) => {
+      const cat = row.dataset.cat;
+      const color = cat==='rouge'?'#c0392b':cat==='orange'?'#e67e22':cat==='vert'?'#27ae60':null;
+      if (!color) return;
+      const pos = allPoints[parseInt(row.dataset.endIdx)];
+      const num = i + 1;
+      const icon = L.divIcon({
+        html: `<div style="background:${color};color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.4);border:1.5px solid #fff;">${num}</div>`,
+        className: '', iconAnchor: [9, 9]
+      });
+      L.marker(pos, { icon, zIndexOffset: 500 }).addTo(mClimbBadgeLayer);
+    });
+    mClimbBadgeLayer.addTo(mapM);
+  }
+  function hideClimbsOnMapM() {
+    if (mClimbsMapLayer) { mapM.removeLayer(mClimbsMapLayer); mClimbsMapLayer = null; }
+    mapM.removeLayer(mClimbBadgeLayer);
+  }
+
   function setTraceModeM(mode) {
     if (mTraceMode === 'slope') { if (mSlopeLayerGroup) mapM.removeLayer(mSlopeLayerGroup); mainPolylineM.setStyle({ color: '#2980b9', opacity: .9, weight: 3 }); }
-    if (mTraceMode === 'climbs') { altChartMInst && altChartMInst.update('none'); }
+    if (mTraceMode === 'climbs') { hideClimbsOnMapM(); altChartMInst && altChartMInst.update('none'); }
     mTraceMode = mode;
     if (mode === 'slope') { buildSlopeLayersM(); mainPolylineM.setStyle({ opacity:0, weight:0 }); mSlopeLayerGroup.addTo(mapM); }
-    if (mode === 'climbs') { buildClimbAnnotationsM(); altChartMInst && altChartMInst.update('none'); }
+    if (mode === 'climbs') { buildClimbAnnotationsM(); showClimbsOnMapM(); altChartMInst && altChartMInst.update('none'); }
     ['none','slope','climbs'].forEach(m => {
       const el = document.getElementById('mtbtn-'+m);
       if (el) { el.style.background = m===mode?'#2c3e50':'#fff'; el.style.color = m===mode?'#fff':'#444'; }
@@ -1710,6 +1879,17 @@ window.addEventListener('resize', () => {
   if (isMobile() && !mapM) { initMobile(); setTimeout(attachCursorEventsM, 500); }
 });
 </script>
+
+<div id="mini-profile">
+  <p class="mp-title" id="mp-title"></p>
+  <div class="mp-stats">
+    <div class="mp-stat"><span>Distance</span><span id="mp-dist"></span></div>
+    <div class="mp-stat"><span>Dénivelé</span><span id="mp-deni"></span></div>
+    <div class="mp-stat"><span>Pente moy.</span><span id="mp-pct"></span></div>
+    <div class="mp-stat"><span>Alt. sommet</span><span id="mp-top"></span></div>
+  </div>
+  <canvas id="mp-canvas" height="60"></canvas>
+</div>
 
 </body>
 </html>
