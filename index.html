@@ -165,10 +165,11 @@
       background: #f2f2f2;
     }
     .map-card {
-      flex: 1 1 0;
+      flex: 65;
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      position: relative;
     }
     .card-title {
       font-size: 0.88em;
@@ -190,8 +191,10 @@
     }
     #map { flex: 1; width: 100%; }
 
+
     .chart-card {
-      flex: 0 0 210px;
+      flex: 35;
+      min-height: 0;
       display: flex;
       flex-direction: column;
       background: #fff;
@@ -199,11 +202,11 @@
     }
     .chart-wrap {
       flex: 1;
+      min-height: 0;
       padding: 10px 14px 12px;
-      display: flex;
-      align-items: stretch;
+      position: relative;
     }
-    #altChart { width: 100% !important; }
+    #altChart { position: absolute; inset: 10px 14px 12px; width: calc(100% - 28px) !important; height: calc(100% - 22px) !important; }
 
     /* ═══════════════════════════════════════════════
        NAVIGATION MOBILE (cachée sur desktop)
@@ -413,8 +416,11 @@
 
 <div class="stats-bar">
   <div class="stat"><strong>100,2 km</strong>Distance</div>
-  <div class="stat"><strong>2 263</strong>Points GPS</div>
-  <div class="stat"><strong>230 m – 643 m</strong>Altitude</div>
+  <div class="stat"><strong>+3 408 m</strong>Dénivelé +</div>
+  <div class="stat"><strong>−3 408 m</strong>Dénivelé −</div>
+  <div class="stat"><strong>230 m</strong>Alt. min</div>
+  <div class="stat"><strong>643 m</strong>Alt. max</div>
+  <div class="stat"><strong>394 m</strong>Alt. moy</div>
   <div class="stat"><strong>44</strong>Côtes ≥ 300 m</div>
 </div>
 
@@ -457,7 +463,15 @@
         <span class="selection-info" id="map-info"></span>
       </div>
       <div id="map"></div>
+      <div id="slope-legend" style="display:none;position:absolute;bottom:28px;left:10px;z-index:1000;background:rgba(255,255,255,.92);border-radius:6px;padding:5px 10px;font-size:10px;font-weight:600;gap:10px;align-items:center;box-shadow:0 1px 4px rgba(0,0,0,.2);">
+        <span style="color:#888">▬ Plat</span>
+        <span style="color:#27ae60">▬ 4–7 %</span>
+        <span style="color:#e67e22">▬ 7–10 %</span>
+        <span style="color:#c0392b">▬ ≥ 10 %</span>
+        <span style="color:#2980b9">▬ Descente</span>
+      </div>
     </div>
+
     <div class="chart-card">
       <div class="card-title">
         📈 Profil altimétrique
@@ -486,10 +500,246 @@ const chartEle = [230.7, 230.2, 245.4, 283.6, 320.2, 329.4, 344.0, 366.6, 393.8,
 // CARTE LEAFLET
 // ═══════════════════════════════════════════════════
 const map = L.map('map').setView([50.1822, 5.6751], 12);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+// ── Couches de fond ───────────────────────────────────────────────
+const layerOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-  maxZoom: 18
-}).addTo(map);
+  maxZoom: 19
+});
+const layerSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  attribution: '© Esri — Satellite',
+  maxZoom: 19
+});
+const layerTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenTopoMap',
+  maxZoom: 17
+});
+layerOSM.addTo(map);
+
+// Sélecteur de couches (coin haut droit de la carte)
+const layerBtns = [
+  { id: 'osm',  label: 'Carte',     layer: layerOSM  },
+  { id: 'sat',  label: 'Satellite', layer: layerSat  },
+  { id: 'topo', label: 'Topo',      layer: layerTopo },
+];
+let activeLayer = layerOSM;
+
+// ── Tracé coloré par pente ────────────────────────────────────────
+let slopeLayerGroup = null;
+let slopeMode = false;
+
+function buildSlopeLayers() {
+  if (slopeLayerGroup) return; // déjà construit
+  slopeLayerGroup = L.layerGroup();
+  const WIN = 6; // fenêtre de lissage (±6 points ≈ 240m)
+  for (let i = 0; i < allPoints.length - 1; i++) {
+    const i0 = Math.max(0, i - WIN);
+    const i1 = Math.min(allPoints.length - 1, i + WIN);
+    const dElev = allElevFull[i1] - allElevFull[i0];
+    const dDist = (allDist[i1] - allDist[i0]) * 1000;
+    const pct = dDist > 0 ? (dElev / dDist) * 100 : 0;
+    let color;
+    if      (pct >= 10)  color = '#c0392b'; // rouge
+    else if (pct >= 7)   color = '#e67e22'; // orange
+    else if (pct >= 4)   color = '#27ae60'; // vert
+    else if (pct <= -4)  color = '#2980b9'; // bleu (descente marquée)
+    else                 color = '#888';    // gris (plat)
+    L.polyline([allPoints[i], allPoints[i + 1]], {
+      color, weight: 4, opacity: 0.9, smoothFactor: 1
+    }).addTo(slopeLayerGroup);
+  }
+}
+
+function enableSlopeMode() {
+  buildSlopeLayers();
+  mainPolyline.setStyle({ opacity: 0, weight: 0 });
+  slopeLayerGroup.addTo(map);
+  slopeMode = true;
+  document.getElementById('slope-legend').style.display = 'flex';
+  const b = document.getElementById('lbtn-slope');
+  if (b) { b.style.background = '#2c3e50'; b.style.color = '#fff'; }
+}
+
+function disableSlopeMode() {
+  if (slopeLayerGroup) map.removeLayer(slopeLayerGroup);
+  mainPolyline.setStyle({ color: '#2980b9', opacity: .9, weight: 3.5 });
+  slopeMode = false;
+  document.getElementById('slope-legend').style.display = 'none';
+  const b = document.getElementById('lbtn-slope');
+  if (b) { b.style.background = '#fff'; b.style.color = '#444'; }
+}
+
+// ── Contrôle unifié : fond de carte + mode pente ──────────────────
+const TILE_BTNS = [
+  { id: 'osm',  label: 'Carte',     layer: layerOSM  },
+  { id: 'sat',  label: 'Satellite', layer: layerSat  },
+  { id: 'topo', label: 'Topo',      layer: layerTopo },
+];
+
+// Contrôle 1 : fond de carte (Carte / Satellite / Topo)
+const tileControl = L.Control.extend({
+  options: { position: 'topright' },
+  onAdd() {
+    const div = L.DomUtil.create('div');
+    div.style.cssText = 'background:#fff;border-radius:6px;box-shadow:0 1px 5px rgba(0,0,0,.3);overflow:hidden;display:flex;';
+    TILE_BTNS.forEach(({ id, label, layer }, idx) => {
+      const btn = L.DomUtil.create('button', '', div);
+      btn.textContent = label;
+      btn.id = 'lbtn-' + id;
+      const isActive = layer === activeLayer;
+      btn.style.cssText = 'padding:5px 10px;border:none;background:' + (isActive ? '#2c3e50' : '#fff') + ';color:' + (isActive ? '#fff' : '#444') + ';font-size:11px;font-weight:600;cursor:pointer;border-right:' + (idx < TILE_BTNS.length - 1 ? '1px solid #eee' : 'none') + ';transition:background .15s,color .15s;';
+      L.DomEvent.on(btn, 'click', (e) => {
+        L.DomEvent.stopPropagation(e);
+        map.removeLayer(activeLayer);
+        map.addLayer(layer);
+        activeLayer = layer;
+        TILE_BTNS.forEach(b => {
+          const el = document.getElementById('lbtn-' + b.id);
+          if (el) { el.style.background = b.layer === layer ? '#2c3e50' : '#fff'; el.style.color = b.layer === layer ? '#fff' : '#444'; }
+        });
+      });
+    });
+    return div;
+  }
+});
+new tileControl().addTo(map);
+
+// ── Mode tracé : 'none' | 'slope' | 'climbs' ──────────────────────
+let traceMode = 'none'; // radio : aucun / pente / côtes
+
+// --- Côtes permanentes sur profil + carte ---
+let climbeAnnotations = []; // [{startKm, endKm, color, startIdx, endIdx}]
+let climbsMapLayer = null;
+
+function buildClimbAnnotations() {
+  if (climbeAnnotations.length) return;
+  document.querySelectorAll('#climbs-body tr').forEach(row => {
+    const cat = row.dataset.cat;
+    const color = cat === 'rouge' ? '#c0392b' : cat === 'orange' ? '#e67e22' : cat === 'vert' ? '#27ae60' : null;
+    if (color) climbeAnnotations.push({
+      startKm:  parseFloat(row.dataset.startKm),
+      endKm:    parseFloat(row.dataset.endKm),
+      startIdx: parseInt(row.dataset.startIdx),
+      endIdx:   parseInt(row.dataset.endIdx),
+      color
+    });
+  });
+}
+
+function showClimbsOnMap() {
+  if (climbsMapLayer) return;
+  buildClimbAnnotations();
+  climbsMapLayer = L.layerGroup();
+  climbeAnnotations.forEach(({ startIdx, endIdx, color }) => {
+    L.polyline(allPoints.slice(startIdx, endIdx + 1), {
+      color, weight: 5, opacity: 0.9
+    }).addTo(climbsMapLayer);
+  });
+  climbsMapLayer.addTo(map);
+}
+
+function hideClimbsOnMap() {
+  if (climbsMapLayer) { map.removeLayer(climbsMapLayer); climbsMapLayer = null; }
+}
+
+// Plugin Chart.js : dessine les bandes de côtes
+Chart.register({
+  id: 'climbBands',
+  beforeDatasetsDraw(chart) {
+    if (traceMode !== 'climbs' || chart.canvas.id !== 'altChart') return;
+    const { ctx, scales } = chart;
+    ctx.save();
+    climbeAnnotations.forEach(({ startKm, endKm, color }) => {
+      const x1 = scales.x.getPixelForValue(startKm);
+      const x2 = scales.x.getPixelForValue(endKm);
+      ctx.fillStyle = color + '28';
+      ctx.fillRect(x1, scales.y.top, x2 - x1, scales.y.bottom - scales.y.top);
+      ctx.fillStyle = color;
+      ctx.fillRect(x1, scales.y.top, x2 - x1, 3);
+    });
+    ctx.restore();
+  }
+});
+
+function setTraceMode(mode) {
+  const prev = traceMode;
+  traceMode = mode;
+
+  // --- Désactiver l'ancien mode ---
+  if (prev === 'slope') {
+    if (slopeLayerGroup) map.removeLayer(slopeLayerGroup);
+    mainPolyline.setStyle({ color: '#2980b9', opacity: .9, weight: 3.5 });
+    document.getElementById('slope-legend').style.display = 'none';
+  }
+  if (prev === 'climbs') {
+    hideClimbsOnMap();
+    // tracé principal toujours visible en mode climbs → pas besoin de restaurer
+  }
+
+  // --- Activer le nouveau mode ---
+  if (mode === 'slope') {
+    buildSlopeLayers();
+    mainPolyline.setStyle({ opacity: 0, weight: 0 });
+    slopeLayerGroup.addTo(map);
+    document.getElementById('slope-legend').style.display = 'flex';
+  }
+  if (mode === 'climbs') {
+    buildClimbAnnotations();
+    // Garder le tracé bleu principal, ajouter les côtes colorées par-dessus
+    showClimbsOnMap();
+  }
+
+  // Toujours redessiner le profil (bandes côtes on/off)
+  altChart && altChart.update('none');
+
+  // Mettre à jour les 3 boutons radio
+  ['none','slope','climbs'].forEach(m => {
+    const el = document.getElementById('tbtn-' + m);
+    if (!el) return;
+    el.style.background = m === mode ? '#2c3e50' : '#fff';
+    el.style.color      = m === mode ? '#fff'    : '#444';
+  });
+}
+
+// Rétrocompat pour clearHighlight
+function enableSlopeMode()  { setTraceMode('slope'); }
+function disableSlopeMode() { setTraceMode('none');  }
+
+// ── Contrôle 2 : tracé (radio Aucun · Pente · Côtes) ──────────────
+const traceControl = L.Control.extend({
+  options: { position: 'topright' },
+  onAdd() {
+    const row = L.DomUtil.create('div');
+    row.style.cssText = 'margin-top:6px;background:#fff;border-radius:6px;box-shadow:0 1px 5px rgba(0,0,0,.3);overflow:hidden;display:flex;';
+
+    const MODES = [
+      { id: 'none',   label: 'Aucun' },
+      { id: 'slope',  label: 'Pente' },
+      { id: 'climbs', label: 'Côtes' },
+    ];
+    MODES.forEach(({ id, label }, idx) => {
+      const btn = L.DomUtil.create('button', '', row);
+      btn.id = 'tbtn-' + id;
+      const isActive = id === traceMode;
+      btn.style.cssText = 'padding:5px 10px;border:none;background:' + (isActive?'#2c3e50':'#fff') + ';color:' + (isActive?'#fff':'#444') + ';font-size:11px;font-weight:600;cursor:pointer;border-right:' + (idx<MODES.length-1?'1px solid #eee':'none') + ';transition:background .15s,color .15s;white-space:nowrap;';
+
+      // Bug 1 fix : toujours définir innerHTML pour avoir le label
+      if (id === 'slope') {
+        btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:5px;"><span style="display:inline-block;width:14px;height:4px;background:linear-gradient(to right,#888 20%,#27ae60 20%,#27ae60 45%,#e67e22 45%,#e67e22 70%,#c0392b 70%);border-radius:2px;flex-shrink:0;"></span>Pente</span>';
+      } else if (id === 'climbs') {
+        btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:5px;"><span style="display:inline-flex;gap:2px;flex-shrink:0;"><span style="width:4px;height:10px;background:#27ae60;border-radius:1px;"></span><span style="width:4px;height:10px;background:#e67e22;border-radius:1px;"></span><span style="width:4px;height:10px;background:#c0392b;border-radius:1px;"></span></span>Côtes</span>';
+      } else {
+        btn.textContent = label; // 'Aucun'
+      }
+
+      L.DomEvent.on(btn, 'click', e => {
+        L.DomEvent.stopPropagation(e);
+        setTraceMode(id === traceMode ? 'none' : id);
+      });
+    });
+    return row;
+  }
+});
+new traceControl().addTo(map);
 
 // Tracé principal (grisé quand une côte est sélectionnée)
 const mainPolyline = L.polyline(allPoints, { color: '#2980b9', weight: 3.5, opacity: .9 }).addTo(map);
@@ -510,7 +760,10 @@ function clearHighlight() {
   if (highlightLayer)   { map.removeLayer(highlightLayer);   highlightLayer = null; }
   if (highlightMarkerS) { map.removeLayer(highlightMarkerS); highlightMarkerS = null; }
   if (highlightMarkerE) { map.removeLayer(highlightMarkerE); highlightMarkerE = null; }
-  mainPolyline.setStyle({ color: '#2980b9', opacity: .9, weight: 3.5 });
+  // Restaurer le tracé bleu sauf si mode pente (tracé masqué)
+  if (traceMode === 'none' || traceMode === 'climbs') {
+    mainPolyline.setStyle({ color: '#2980b9', opacity: .9, weight: 3.5 });
+  }
   document.getElementById('map-info').textContent = '';
 }
 
@@ -530,6 +783,190 @@ function highlightOnMap(startIdx, endIdx, label) {
 }
 
 setTimeout(() => map.invalidateSize(), 200);
+
+// ═══════════════════════════════════════════════════
+// MARQUEURS KILOMÉTRIQUES (cercles blancs, tous les 10km)
+// Apparaissent/disparaissent selon le zoom
+// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+// MARQUEURS KILOMÉTRIQUES — adaptatifs selon le zoom
+// zoom < 11  → tous les 10km, cercle 22px
+// zoom 11-12 → tous les 10km, cercle 26px
+// zoom 13-14 → tous les  5km, cercle 28px (×5 discret, ×10 accentué)
+// zoom > 14  → tous les  5km, cercle 30px
+// ═══════════════════════════════════════════════════
+function findPointAtDist(targetKm) {
+  let bestIdx = 0, bestDiff = Infinity;
+  for (let i = 0; i < allDist.length; i++) {
+    const diff = Math.abs(allDist[i] - targetKm);
+    if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+    if (allDist[i] > targetKm + 0.5) break;
+  }
+  return bestIdx;
+}
+
+const totalKm = Math.floor(allDist[allDist.length - 1]);
+
+// Pré-calculer positions pour tous les 5km
+const kmPositions = {}; // km → {pos, idx}
+for (let km = 5; km < totalKm; km += 5) {
+  const idx = findPointAtDist(km);
+  kmPositions[km] = { pos: allPoints[idx], idx };
+}
+
+// Pool de marqueurs (on les crée une fois, on les affiche/cache)
+const kmMarkerPool = {}; // km → L.marker
+
+function makeKmIcon(km, size, fontSize, isMajor) {
+  const bg    = isMajor ? '#fff'    : 'rgba(255,255,255,0.88)';
+  const color = isMajor ? '#2c3e50' : '#5a7080';
+  const border= isMajor ? '2px solid #999' : '1px solid #bbb';
+  const shadow= isMajor ? '0 1px 4px rgba(0,0,0,.35)' : '0 1px 3px rgba(0,0,0,.2)';
+  return L.divIcon({
+    html: `<div style="background:${bg};color:${color};border-radius:50%;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-size:${fontSize}px;font-weight:700;box-shadow:${shadow};border:${border};line-height:1;">${km}</div>`,
+    className: '',
+    iconAnchor: [size/2, size/2]
+  });
+}
+
+function updateKmMarkers() {
+  const z = map.getZoom();
+
+  // Décider quels km afficher et leur style
+  let step, size, fontSize;
+  if (z < 11)       { step = 10; size = 22; fontSize = 9; }
+  else if (z < 13)  { step = 10; size = 26; fontSize = 10; }
+  else if (z < 15)  { step = 5;  size = 26; fontSize = 10; }
+  else              { step = 5;  size = 30; fontSize = 11; }
+
+  // Afficher / masquer / mettre à jour chaque marqueur
+  for (let km = 5; km < totalKm; km += 5) {
+    const isMajor  = (km % 10 === 0);
+    const visible  = (km % step === 0);
+    const { pos }  = kmPositions[km];
+
+    if (visible) {
+      // Taille : les multiples de 10 sont toujours accentués
+      const markerSize = isMajor ? size : Math.round(size * 0.82);
+      const markerFont = isMajor ? fontSize : Math.max(8, fontSize - 1);
+      const icon = makeKmIcon(km, markerSize, markerFont, isMajor);
+
+      if (!kmMarkerPool[km]) {
+        // Créer le marqueur
+        const m = L.marker(pos, { icon, zIndexOffset: isMajor ? 200 : 100 }).addTo(map);
+        m.bindTooltip(`${km} km`, { permanent: false, direction: 'top', offset: [0, -(markerSize/2+4)] });
+        kmMarkerPool[km] = m;
+      } else {
+        // Mettre à jour l'icône
+        kmMarkerPool[km].setIcon(icon);
+        if (!map.hasLayer(kmMarkerPool[km])) kmMarkerPool[km].addTo(map);
+      }
+    } else {
+      // Masquer
+      if (kmMarkerPool[km] && map.hasLayer(kmMarkerPool[km])) {
+        map.removeLayer(kmMarkerPool[km]);
+      }
+    }
+  }
+}
+
+map.on('zoomend', updateKmMarkers);
+updateKmMarkers(); // init au chargement
+
+// ═══════════════════════════════════════════════════
+// CURSEUR — suit le trajet sur carte + profil
+// ═══════════════════════════════════════════════════
+let cursorMarker = null;
+let cursorChartLine = null;
+let cursorActive = false;
+let cursorAnimFrame = null;
+let cursorKm = 0;
+
+// Marqueur curseur sur la carte
+const cursorIcon = L.divIcon({
+  html: `<div id="cursor-dot" style="
+    background:#e74c3c;border:2.5px solid #fff;
+    border-radius:50%;width:14px;height:14px;
+    box-shadow:0 0 0 3px rgba(231,76,60,.35);
+    transition:none;
+  "></div>`,
+  className: '',
+  iconAnchor: [7, 7]
+});
+
+// Trouver index à partir d'un km
+function idxAtKm(km) {
+  let lo = 0, hi = allDist.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (allDist[mid] < km) lo = mid + 1; else hi = mid;
+  }
+  return lo;
+}
+
+// Plugin Chart.js pour la ligne verticale curseur
+Chart.register({
+  id: 'cursorLine',
+  afterDatasetsDraw(chart) {
+    if (!cursorActive || chart.canvas.id !== 'altChart') return;
+    const { ctx, scales } = chart;
+    const x = scales.x.getPixelForValue(cursorKm);
+    const yTop = scales.y.top, yBot = scales.y.bottom;
+    ctx.save();
+    ctx.strokeStyle = '#e74c3c';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(x, yTop); ctx.lineTo(x, yBot); ctx.stroke();
+    // Petit point sur la courbe
+    const ele = allElevFull[idxAtKm(cursorKm)];
+    const y = scales.y.getPixelForValue(ele);
+    ctx.fillStyle = '#e74c3c';
+    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+});
+
+function moveCursor(km) {
+  cursorKm = Math.max(0, Math.min(km, allDist[allDist.length - 1]));
+  const idx = idxAtKm(cursorKm);
+  const pos = allPoints[idx];
+  if (!cursorMarker) {
+    cursorMarker = L.marker(pos, { icon: cursorIcon, zIndexOffset: 1000, interactive: false }).addTo(map);
+  } else {
+    cursorMarker.setLatLng(pos);
+  }
+  altChart.update('none');
+}
+
+function startCursor() {
+  cursorActive = true;
+  if (!cursorMarker) moveCursor(0);
+}
+
+function stopCursor() {
+  cursorActive = false;
+  if (cursorMarker) { map.removeLayer(cursorMarker); cursorMarker = null; }
+  altChart.update('none');
+}
+
+// Interaction profil → curseur sur carte
+document.getElementById('altChart').addEventListener('mousemove', (e) => {
+  const chart = altChart;
+  const rect = chart.canvas.getBoundingClientRect();
+  const xVal = chart.scales.x.getValueForPixel(e.clientX - rect.left);
+  if (xVal >= 0 && xVal <= allDist[allDist.length - 1]) {
+    startCursor();
+    moveCursor(xVal);
+  }
+});
+document.getElementById('altChart').addEventListener('mouseleave', stopCursor);
+document.getElementById('altChart').addEventListener('touchmove', (e) => {
+  const t = e.touches[0];
+  const rect = altChart.canvas.getBoundingClientRect();
+  const xVal = altChart.scales.x.getValueForPixel(t.clientX - rect.left);
+  if (xVal >= 0) { startCursor(); moveCursor(xVal); }
+}, { passive: true });
+document.getElementById('altChart').addEventListener('touchend', stopCursor);
 
 // ═══════════════════════════════════════════════════
 // CHART.JS — PROFIL ALTIMÉTRIQUE
@@ -573,8 +1010,31 @@ const altChart = new Chart(ctx, {
       legend: { display: false },
       tooltip: {
         callbacks: {
-          title: items => items[0].label + ' km',
-          label: item => (item.datasetIndex === 0 ? ' ' : ' ★ ') + item.raw + ' m'
+          title: items => {
+            const km = parseFloat(items[0].label);
+            return km.toFixed(2) + ' km';
+          },
+          label: item => {
+            if (item.datasetIndex !== 0) return ' ★ ' + item.raw + ' m';
+            const ele = item.raw;
+            // Calcul pente : chercher le point GPX le plus proche et estimer la pente sur ~200m
+            const km = parseFloat(item.label);
+            let idx = 0, best = Infinity;
+            for (let i = 0; i < allDist.length; i++) {
+              const d = Math.abs(allDist[i] - km);
+              if (d < best) { best = d; idx = i; }
+              if (allDist[i] > km + 0.3) break;
+            }
+            // Pente sur fenêtre de ±10 points
+            const w = 10;
+            const i0 = Math.max(0, idx - w);
+            const i1 = Math.min(allDist.length - 1, idx + w);
+            const dElev = allElevFull[i1] - allElevFull[i0];
+            const dDist = (allDist[i1] - allDist[i0]) * 1000;
+            const pct = dDist > 0 ? (dElev / dDist * 100) : 0;
+            const sign = pct > 0 ? '+' : '';
+            return ' ' + ele + ' m   ' + sign + pct.toFixed(1) + ' %';
+          }
         }
       }
     },
@@ -806,10 +1266,111 @@ function initMobile() {
 
   // Carte
   mapM = L.map('map-m').setView([50.1822, 5.6751], 12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    maxZoom: 18
-  }).addTo(mapM);
+  const mLayerOSM  = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 });
+  const mLayerSat  = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 19 });
+  const mLayerTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap', maxZoom: 17 });
+  mLayerOSM.addTo(mapM);
+  let mActiveLayer = mLayerOSM;
+  let mSlopeLayerGroup = null;
+  let mSlopeMode = false;
+
+  function buildSlopeLayersM() {
+    if (mSlopeLayerGroup) return;
+    mSlopeLayerGroup = L.layerGroup();
+    const WIN = 6;
+    for (let i = 0; i < allPoints.length - 1; i++) {
+      const i0 = Math.max(0, i - WIN), i1 = Math.min(allPoints.length - 1, i + WIN);
+      const pct = (allDist[i1] - allDist[i0]) > 0 ? ((allElevFull[i1] - allElevFull[i0]) / ((allDist[i1] - allDist[i0]) * 1000)) * 100 : 0;
+      const color = pct >= 10 ? '#c0392b' : pct >= 7 ? '#e67e22' : pct >= 4 ? '#27ae60' : pct <= -4 ? '#2980b9' : '#888';
+      L.polyline([allPoints[i], allPoints[i + 1]], { color, weight: 3.5, opacity: 0.9 }).addTo(mSlopeLayerGroup);
+    }
+  }
+  function enableSlopeModeM() {
+    buildSlopeLayersM();
+    mainPolylineM.setStyle({ opacity: 0, weight: 0 });
+    mSlopeLayerGroup.addTo(mapM);
+    mSlopeMode = true;
+    const b = document.getElementById('lbtn-slope-m');
+    if (b) { b.style.background = '#2c3e50'; b.style.color = '#fff'; }
+  }
+  function disableSlopeModeM() {
+    if (mSlopeLayerGroup) mapM.removeLayer(mSlopeLayerGroup);
+    mainPolylineM.setStyle({ color: '#2980b9', opacity: .9, weight: 3 });
+    mSlopeMode = false;
+    const b = document.getElementById('lbtn-slope-m');
+    if (b) { b.style.background = '#fff'; b.style.color = '#444'; }
+  }
+
+  // Contrôle fond de carte
+  const mTileCtrl = L.Control.extend({
+    options: { position: 'topright' },
+    onAdd() {
+      const d = L.DomUtil.create('div');
+      d.style.cssText = 'background:#fff;border-radius:5px;box-shadow:0 1px 4px rgba(0,0,0,.3);overflow:hidden;display:flex;';
+      [['osm2','Carte',mLayerOSM],['sat2','Sat.',mLayerSat],['topo2','Topo',mLayerTopo]].forEach(([id,lbl,lyr], idx, arr) => {
+        const b = L.DomUtil.create('button','',d);
+        b.textContent = lbl; b.id = 'lbtn-'+id;
+        b.style.cssText = 'padding:4px 8px;border:none;background:'+(lyr===mActiveLayer?'#2c3e50':'#fff')+';color:'+(lyr===mActiveLayer?'#fff':'#444')+';font-size:10px;font-weight:600;cursor:pointer;border-right:'+(idx<arr.length-1?'1px solid #eee':'none')+';';
+        L.DomEvent.on(b,'click',e=>{ L.DomEvent.stopPropagation(e); mapM.removeLayer(mActiveLayer); mapM.addLayer(lyr); mActiveLayer=lyr;
+          [['osm2',mLayerOSM],['sat2',mLayerSat],['topo2',mLayerTopo]].forEach(([i,l])=>{ const el=document.getElementById('lbtn-'+i); if(el){el.style.background=l===lyr?'#2c3e50':'#fff'; el.style.color=l===lyr?'#fff':'#444';} }); });
+      });
+      return d;
+    }
+  });
+  new mTileCtrl().addTo(mapM);
+
+  // Contrôle tracé mobile (Aucun · Pente · Côtes)
+  let mTraceMode = 'none';
+  let mClimbAnnotations = [];
+  function buildClimbAnnotationsM() {
+    if (mClimbAnnotations.length) return;
+    document.querySelectorAll('#climbs-body tr').forEach(row => {
+      const cat = row.dataset.cat;
+      const color = cat==='rouge'?'#c0392b':cat==='orange'?'#e67e22':cat==='vert'?'#27ae60':null;
+      if (color) mClimbAnnotations.push({ startKm: parseFloat(row.dataset.startKm), endKm: parseFloat(row.dataset.endKm), color });
+    });
+  }
+  Chart.register({
+    id: 'climbBandsM',
+    beforeDatasetsDraw(chart) {
+      if (chart.canvas.id !== 'altChartM' || mTraceMode !== 'climbs') return;
+      const { ctx, scales } = chart;
+      ctx.save();
+      mClimbAnnotations.forEach(({ startKm, endKm, color }) => {
+        const x1 = scales.x.getPixelForValue(startKm), x2 = scales.x.getPixelForValue(endKm);
+        ctx.fillStyle = color + '30'; ctx.fillRect(x1, scales.y.top, x2-x1, scales.y.bottom-scales.y.top);
+        ctx.fillStyle = color; ctx.fillRect(x1, scales.y.top, x2-x1, 3);
+      });
+      ctx.restore();
+    }
+  });
+  function setTraceModeM(mode) {
+    if (mTraceMode === 'slope') { if (mSlopeLayerGroup) mapM.removeLayer(mSlopeLayerGroup); mainPolylineM.setStyle({ color: '#2980b9', opacity: .9, weight: 3 }); }
+    if (mTraceMode === 'climbs') { altChartMInst && altChartMInst.update('none'); }
+    mTraceMode = mode;
+    if (mode === 'slope') { buildSlopeLayersM(); mainPolylineM.setStyle({ opacity:0, weight:0 }); mSlopeLayerGroup.addTo(mapM); }
+    if (mode === 'climbs') { buildClimbAnnotationsM(); altChartMInst && altChartMInst.update('none'); }
+    ['none','slope','climbs'].forEach(m => {
+      const el = document.getElementById('mtbtn-'+m);
+      if (el) { el.style.background = m===mode?'#2c3e50':'#fff'; el.style.color = m===mode?'#fff':'#444'; }
+    });
+  }
+
+  const mTraceCtrl = L.Control.extend({
+    options: { position: 'topright' },
+    onAdd() {
+      const wrap = L.DomUtil.create('div');
+      wrap.style.cssText = 'margin-top:5px;background:#fff;border-radius:5px;box-shadow:0 1px 4px rgba(0,0,0,.3);overflow:hidden;display:flex;';
+      [['none','Aucun'],['slope','Pente'],['climbs','Côtes']].forEach(([id,lbl],idx,arr) => {
+        const b = L.DomUtil.create('button','',wrap);
+        b.id = 'mtbtn-'+id; b.textContent = lbl;
+        b.style.cssText = 'padding:4px 8px;border:none;background:'+(id===mTraceMode?'#2c3e50':'#fff')+';color:'+(id===mTraceMode?'#fff':'#444')+';font-size:10px;font-weight:600;cursor:pointer;border-right:'+(idx<arr.length-1?'1px solid #eee':'none')+';';
+        L.DomEvent.on(b,'click',e=>{ L.DomEvent.stopPropagation(e); setTraceModeM(id===mTraceMode?'none':id); });
+      });
+      return wrap;
+    }
+  });
+  new mTraceCtrl().addTo(mapM);
   mainPolylineM = L.polyline(allPoints, { color: '#2980b9', weight: 3, opacity: .9 }).addTo(mapM);
   mapM.fitBounds(mainPolylineM.getBounds(), { padding: [30, 30] });
 
@@ -842,7 +1403,22 @@ function initMobile() {
       plugins: {
         legend: { display: false },
         customShadeM: true,
-        tooltip: { callbacks: { title: i => i[0].label + ' km', label: i => ' ' + i.raw + ' m' } }
+        tooltip: { callbacks: {
+          title: i => parseFloat(i[0].label).toFixed(2) + ' km',
+          label: i => {
+            if (i.datasetIndex !== 0) return ' ★ ' + i.raw + ' m';
+            const km = parseFloat(i.label);
+            let idx = 0, best = Infinity;
+            for (let j = 0; j < allDist.length; j++) {
+              const d = Math.abs(allDist[j] - km);
+              if (d < best) { best = d; idx = j; }
+              if (allDist[j] > km + 0.3) break;
+            }
+            const w = 10, i0 = Math.max(0,idx-w), i1 = Math.min(allDist.length-1,idx+w);
+            const pct = (allDist[i1]-allDist[i0]) > 0 ? ((allElevFull[i1]-allElevFull[i0])/((allDist[i1]-allDist[i0])*1000)*100) : 0;
+            return ' ' + i.raw + ' m   ' + (pct>=0?'+':'') + pct.toFixed(1) + ' %';
+          }
+        } }
       },
       scales: {
         x: { type: 'linear', min: 0, max: chartKm[chartKm.length-1],
@@ -882,6 +1458,72 @@ function initMobile() {
 
   // Remplir le tableau mobile depuis le tableau desktop
   buildMobileTable();
+
+  // Marqueurs km mobile — adaptatifs selon zoom
+  const kmMarkerPoolM = {};
+  function updateKmMarkersM() {
+    const z = mapM.getZoom();
+    let step, size, fontSize;
+    if (z < 11)      { step = 10; size = 20; fontSize = 9; }
+    else if (z < 13) { step = 10; size = 24; fontSize = 10; }
+    else if (z < 15) { step = 5;  size = 24; fontSize = 9; }
+    else             { step = 5;  size = 28; fontSize = 10; }
+
+    for (let km = 5; km < Math.floor(allDist[allDist.length-1]); km += 5) {
+      const isMajor = (km % 10 === 0);
+      const visible = (km % step === 0);
+      const bg    = isMajor ? '#fff'   : 'rgba(255,255,255,0.88)';
+      const color = isMajor ? '#2c3e50': '#5a7080';
+      const border= isMajor ? '2px solid #999' : '1px solid #bbb';
+      const mSize = isMajor ? size : Math.round(size * 0.82);
+      const mFont = isMajor ? fontSize : Math.max(8, fontSize - 1);
+
+      if (visible) {
+        const icon = L.divIcon({
+          html: `<div style="background:${bg};color:${color};border-radius:50%;width:${mSize}px;height:${mSize}px;display:flex;align-items:center;justify-content:center;font-size:${mFont}px;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.3);border:${border};line-height:1;">${km}</div>`,
+          className: '', iconAnchor: [mSize/2, mSize/2]
+        });
+        if (!kmMarkerPoolM[km]) {
+          let bestIdx = 0, bestDiff = Infinity;
+          for (let i = 0; i < allDist.length; i++) {
+            const d = Math.abs(allDist[i] - km);
+            if (d < bestDiff) { bestDiff = d; bestIdx = i; }
+            if (allDist[i] > km + 0.5) break;
+          }
+          const m = L.marker(allPoints[bestIdx], { icon, zIndexOffset: isMajor?200:100 }).addTo(mapM);
+          m.bindTooltip(`${km} km`, { permanent: false, direction: 'top', offset: [0, -(mSize/2+4)] });
+          kmMarkerPoolM[km] = m;
+        } else {
+          kmMarkerPoolM[km].setIcon(icon);
+          if (!mapM.hasLayer(kmMarkerPoolM[km])) kmMarkerPoolM[km].addTo(mapM);
+        }
+      } else {
+        if (kmMarkerPoolM[km] && mapM.hasLayer(kmMarkerPoolM[km])) mapM.removeLayer(kmMarkerPoolM[km]);
+      }
+    }
+  }
+  mapM.on('zoomend', updateKmMarkersM);
+  updateKmMarkersM();
+
+  // Plugin curseur mobile
+  Chart.register({
+    id: 'cursorLineM',
+    afterDatasetsDraw(chart) {
+      if (!window._cursorActiveM || chart.canvas.id !== 'altChartM') return;
+      const { ctx, scales } = chart;
+      const x = scales.x.getPixelForValue(window._cursorKmM || 0);
+      const yTop = scales.y.top, yBot = scales.y.bottom;
+      ctx.save();
+      ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(x, yTop); ctx.lineTo(x, yBot); ctx.stroke();
+      const ele = allElevFull[idxAtKmM(window._cursorKmM || 0)];
+      const y = scales.y.getPixelForValue(ele);
+      ctx.fillStyle = '#e74c3c';
+      ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  });
+
   setTimeout(() => { mapM.invalidateSize(); }, 200);
 }
 
@@ -1013,13 +1655,59 @@ function switchTab(tab) {
   if (tab === 'carte') { setTimeout(() => mapM && mapM.invalidateSize(), 50); }
 }
 
+// ─── Curseur mobile : helpers ──────────────────────
+function idxAtKmM(km) {
+  let lo = 0, hi = allDist.length - 1;
+  while (lo < hi) { const mid = (lo+hi)>>1; if (allDist[mid]<km) lo=mid+1; else hi=mid; }
+  return lo;
+}
+window._cursorActiveM = false;
+window._cursorKmM = 0;
+let _cursorMarkerM = null;
+const _cursorIconM = L.divIcon({
+  html: `<div style="background:#e74c3c;border:2.5px solid #fff;border-radius:50%;width:14px;height:14px;box-shadow:0 0 0 3px rgba(231,76,60,.35);"></div>`,
+  className: '', iconAnchor: [7, 7]
+});
+
+function _moveCursorM(km) {
+  if (!mapM) return;
+  window._cursorKmM = Math.max(0, Math.min(km, allDist[allDist.length-1]));
+  const pos = allPoints[idxAtKmM(window._cursorKmM)];
+  if (!_cursorMarkerM) _cursorMarkerM = L.marker(pos, { icon: _cursorIconM, zIndexOffset:1000, interactive:false }).addTo(mapM);
+  else _cursorMarkerM.setLatLng(pos);
+  altChartMInst && altChartMInst.update('none');
+}
+function _stopCursorM() {
+  window._cursorActiveM = false;
+  if (_cursorMarkerM && mapM) { mapM.removeLayer(_cursorMarkerM); _cursorMarkerM = null; }
+  altChartMInst && altChartMInst.update('none');
+}
+
+// Events profil mobile → curseur (ajoutés après init)
+function attachCursorEventsM() {
+  const canvas = document.getElementById('altChartM');
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = altChartMInst.canvas.getBoundingClientRect();
+    const xVal = altChartMInst.scales.x.getValueForPixel(e.clientX - rect.left);
+    if (xVal >= 0) { window._cursorActiveM = true; _moveCursorM(xVal); }
+  });
+  canvas.addEventListener('mouseleave', _stopCursorM);
+  canvas.addEventListener('touchmove', (e) => {
+    const t = e.touches[0];
+    const rect = altChartMInst.canvas.getBoundingClientRect();
+    const xVal = altChartMInst.scales.x.getValueForPixel(t.clientX - rect.left);
+    if (xVal >= 0) { window._cursorActiveM = true; _moveCursorM(xVal); }
+  }, { passive: true });
+  canvas.addEventListener('touchend', _stopCursorM);
+}
+
 // Init au chargement si mobile
 if (isMobile()) {
-  document.addEventListener('DOMContentLoaded', initMobile);
-  window.addEventListener('load', initMobile);
+  document.addEventListener('DOMContentLoaded', () => { initMobile(); setTimeout(attachCursorEventsM, 500); });
+  window.addEventListener('load', () => { initMobile(); setTimeout(attachCursorEventsM, 500); });
 }
 window.addEventListener('resize', () => {
-  if (isMobile() && !mapM) initMobile();
+  if (isMobile() && !mapM) { initMobile(); setTimeout(attachCursorEventsM, 500); }
 });
 </script>
 
