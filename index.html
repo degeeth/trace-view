@@ -138,6 +138,13 @@
       top: 0;
       z-index: 10;
     }
+    thead th.sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+    thead th.sortable:hover { background: #3d5166; }
+    thead th.sort-asc::after  { content: ' ↑'; font-size: 11px; opacity: .9; }
+    thead th.sort-desc::after { content: ' ↓'; font-size: 11px; opacity: .9; }
     tbody tr {
       cursor: pointer;
       transition: background .12s;
@@ -215,17 +222,16 @@
     .mobile-tab-content { display: none; }
 
     @media (max-width: 768px) {
-      /* Body scroll sur mobile */
-      body { overflow: auto; height: auto; }
-
-      /* Header compact */
-      header { padding: 10px 14px; flex-wrap: wrap; gap: 4px; }
+      /* Layout global mobile : flex colonne sur toute la hauteur */
+      body { overflow: hidden; height: 100dvh; display: flex; flex-direction: column; }
+      header { padding: 10px 14px; flex-wrap: wrap; gap: 4px; flex-shrink: 0; }
       header h1 { font-size: 1em; }
       header span { font-size: 0.75em; display: block; width: 100%; }
 
       /* Stats bar : 2 colonnes */
-      .stat { padding: 6px 12px; font-size: 0.78em; }
+      .stat { padding: 6px 12px; font-size: 0.78em; flex-shrink: 0; }
       .stat strong { font-size: 1em; }
+      .stats-bar { flex-shrink: 0; }
 
       /* Layout : cacher les 2 colonnes desktop, afficher onglets */
       .layout { display: none; }
@@ -235,8 +241,6 @@
         display: flex;
         background: #fff;
         border-bottom: 2px solid #e0e0e0;
-        position: sticky;
-        top: 0;
         z-index: 1000;
         flex-shrink: 0;
       }
@@ -260,12 +264,12 @@
         border-bottom-color: #2980b9;
       }
 
-      /* Contenus onglets */
-      .mobile-tab-content { display: none; flex-direction: column; }
+      /* Contenus onglets — flex:1 pour remplir l'espace restant */
+      .mobile-tab-content { display: none; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
       .mobile-tab-content.active { display: flex; }
 
       /* Vue Carte */
-      #tab-carte { height: calc(100vh - 120px); }
+      #tab-carte { overflow: hidden; }
       #tab-carte #map-m {
         flex: 1;
         min-height: 0;
@@ -287,16 +291,14 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+        background: #fff;
       }
       #tab-carte .card-title-m .sel-info {
-        font-size: 0.78em;
+        font-size: 0.82em;
         font-weight: 400;
         color: #2980b9;
         font-style: italic;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 55%;
+        margin-left: 4px;
       }
       #tab-carte .chart-wrap-m {
         flex: 1;
@@ -305,7 +307,7 @@
       #altChartM { width: 100% !important; }
 
       /* Vue Tableau */
-      #tab-tableau { height: calc(100vh - 120px); overflow: hidden; display: flex; flex-direction: column; }
+      #tab-tableau { overflow: hidden; }
       .mobile-col-header {
         font-size: 0.82em;
         font-weight: 700;
@@ -450,8 +452,8 @@
       <table>
         <thead>
           <tr>
-            <th>N°</th><th>Km départ</th><th>Km arrivée</th>
-            <th>Distance</th><th>Dénivelé (pente)</th>
+            <th class="sortable" data-col="num" title="Trier par numéro">N°</th><th>Km départ</th><th>Km arrivée</th>
+            <th class="sortable" data-col="dist" title="Trier par distance">Distance</th><th class="sortable" data-col="deni" title="Trier par dénivelé">Dénivelé (pente)</th>
             <th>Alt. départ</th><th>Alt. sommet</th>
           </tr>
         </thead>
@@ -467,8 +469,8 @@
   <div class="col-right">
     <div class="map-card">
       <div class="card-title">
-        🗺 Tracé du parcours
-        <span class="selection-info" id="map-info"></span>
+        <span>🗺 Tracé du parcours <span class="selection-info" id="map-info"></span></span>
+        <button id="share-btn" onclick="shareClimb()" style="display:none;padding:3px 10px;font-size:11px;font-weight:600;background:#fff;border:1px solid #bbb;border-radius:12px;cursor:pointer;color:#444;white-space:nowrap;flex-shrink:0;" title="Copier le lien vers cette côte">🔗 Partager</button>
       </div>
       <div id="map"></div>
       <div id="slope-legend" style="display:none;position:absolute;bottom:28px;left:10px;z-index:1000;background:rgba(255,255,255,.92);border-radius:6px;padding:5px 10px;font-size:10px;font-weight:600;gap:10px;align-items:center;box-shadow:0 1px 4px rgba(0,0,0,.2);">
@@ -493,6 +495,12 @@
 </div>
 
 <script>
+// Neutraliser le scroll natif du hash au chargement
+if (window.location.hash.match(/^#climb-\d+$/)) {
+  const _savedHash = window.location.hash;
+  history.replaceState(null, '', window.location.pathname + window.location.search);
+  window.addEventListener('load', () => setTimeout(() => history.replaceState(null, '', window.location.pathname + window.location.search + _savedHash), 50));
+}
 // ═══════════════════════════════════════════════════
 // DONNÉES GPS COMPLÈTES (2263 points)
 // ═══════════════════════════════════════════════════
@@ -536,23 +544,23 @@ let slopeLayerGroup = null;
 let slopeMode = false;
 
 function buildSlopeLayers() {
-  if (slopeLayerGroup) return; // déjà construit
+  if (slopeLayerGroup) return;
   slopeLayerGroup = L.layerGroup();
-  const WIN = 6; // fenêtre de lissage (±6 points ≈ 240m)
+  const WIN = 6;
   for (let i = 0; i < allPoints.length - 1; i++) {
     const i0 = Math.max(0, i - WIN);
     const i1 = Math.min(allPoints.length - 1, i + WIN);
     const dElev = allElevFull[i1] - allElevFull[i0];
     const dDist = (allDist[i1] - allDist[i0]) * 1000;
     const pct = dDist > 0 ? (dElev / dDist) * 100 : 0;
-    let color;
-    if      (pct >= 10)  color = '#c0392b'; // rouge
-    else if (pct >= 7)   color = '#e67e22'; // orange
-    else if (pct >= 4)   color = '#27ae60'; // vert
-    else if (pct <= -4)  color = '#2980b9'; // bleu (descente marquée)
-    else                 color = '#888';    // gris (plat)
+    let color, opacity;
+    if      (pct >= 10)  { color = '#c0392b'; opacity = 0.9; } // rouge vif
+    else if (pct >= 7)   { color = '#e67e22'; opacity = 0.9; } // orange vif
+    else if (pct >= 4)   { color = '#27ae60'; opacity = 0.9; } // vert vif
+    else if (pct <= -4)  { color = '#2980b9'; opacity = 0.35; } // bleu discret
+    else                 { color = '#888';    opacity = 0.5; }  // gris neutre
     L.polyline([allPoints[i], allPoints[i + 1]], {
-      color, weight: 4, opacity: 0.9, smoothFactor: 1
+      color, weight: 4, opacity, smoothFactor: 1
     }).addTo(slopeLayerGroup);
   }
 }
@@ -684,7 +692,7 @@ function hideClimbsOnMap() {
 Chart.register({
   id: 'climbBands',
   beforeDatasetsDraw(chart) {
-    if (traceMode !== 'climbs' || chart.canvas.id !== 'altChart') return;
+    if (!chart.canvas || traceMode !== 'climbs' || chart.canvas.id !== 'altChart') return;
     const { ctx, scales } = chart;
     ctx.save();
     climbeAnnotations.forEach(({ startKm, endKm, color }) => {
@@ -950,7 +958,7 @@ function idxAtKm(km) {
 Chart.register({
   id: 'cursorLine',
   afterDatasetsDraw(chart) {
-    if (!cursorActive || chart.canvas.id !== 'altChart') return;
+    if (!chart.canvas || !cursorActive || chart.canvas.id !== 'altChart') return;
     const { ctx, scales } = chart;
     const x = scales.x.getPixelForValue(cursorKm);
     const yTop = scales.y.top, yBot = scales.y.bottom;
@@ -1105,6 +1113,7 @@ altChart.options.plugins.customShade = true;
 Chart.register({
   id: 'customShade',
   beforeDatasetsDraw(chart) {
+    if (!chart.canvas || chart.canvas.id !== 'altChart') return;
     if (!climbAnnotation) return;
     const { ctx, scales } = chart;
     const xScale = scales.x;
@@ -1120,6 +1129,7 @@ Chart.register({
     ctx.restore();
   },
   afterDatasetsDraw(chart) {
+    if (!chart.canvas || chart.canvas.id !== 'altChart') return;
     if (!climbAnnotation) return;
     const { ctx, scales } = chart;
     const xScale = scales.x;
@@ -1171,22 +1181,27 @@ let selectedRow = null;
 
 function selectClimb(row) {
   if (selectedRow === row) {
-    // Désélectionner si on reclique
     row.classList.remove('selected');
     selectedRow = null;
     clearHighlight();
     clearChartHighlight();
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    updateShareBtn(null);
     return;
   }
   if (selectedRow) selectedRow.classList.remove('selected');
   row.classList.add('selected');
   selectedRow = row;
 
+  // Mettre à jour l'URL avec le hash de la côte
+  const num = row.querySelector('td').textContent.trim();
+  history.replaceState(null, '', '#climb-' + num);
+  updateShareBtn(num);
+
   const startIdx = parseInt(row.dataset.startIdx);
   const endIdx   = parseInt(row.dataset.endIdx);
   const startKm  = parseFloat(row.dataset.startKm);
   const endKm    = parseFloat(row.dataset.endKm);
-  const num      = row.querySelector('td').textContent;
   const label    = `Côte #${num} (${startKm} – ${endKm} km)`;
 
   highlightOnMap(startIdx, endIdx, label);
@@ -1231,13 +1246,142 @@ function applyFilters() {
     ? visible + ' côte' + (visible > 1 ? 's' : '') + ' affichée' + (visible > 1 ? 's' : '')
     : '';
 }
-</script>
 
-<!-- mini-profile placeholder, real code below -->
-<script>
+/* ── partage & mini-profil ── */
 // ═══════════════════════════════════════════════════
-// MINI-PROFIL AU SURVOL DU TABLEAU
+// PARTAGE PAR LIEN — hash #climb-N dans l'URL
 // ═══════════════════════════════════════════════════
+
+let _selectedClimbNum = null;
+
+function shareClimb() {
+  if (!_selectedClimbNum) return;
+  const url = window.location.href.replace(/#.*$/, '') + '#climb-' + _selectedClimbNum;
+  const btn = document.getElementById('share-btn');
+  navigator.clipboard.writeText(url).then(() => {
+    btn.innerHTML = '✓ Copié !';
+    btn.style.color = '#27ae60';
+    btn.style.borderColor = '#27ae60';
+    setTimeout(() => {
+      btn.innerHTML = '🔗 Partager';
+      btn.style.color = '#555';
+      btn.style.borderColor = '#ccc';
+    }, 2000);
+  });
+}
+
+function updateShareBtn(num) {
+  _selectedClimbNum = num;
+  const btn = document.getElementById('share-btn');
+  if (btn) btn.style.display = num ? 'inline-block' : 'none';
+}
+
+// Au chargement, lire le hash et sélectionner la côte correspondante
+function applyHashSelection() {
+  const hash = window.location.hash;
+  const match = hash.match(/^#climb-(\d+)$/);
+  if (!match) return;
+  const num = parseInt(match[1]);
+  const rows = document.querySelectorAll('#climbs-body tr');
+  if (num < 1 || num > rows.length) return;
+  const row = rows[num - 1];
+  setTimeout(() => {
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    selectClimb(row);
+    row.style.transition = 'background .3s';
+    row.style.background = '#fef9e7';
+    setTimeout(() => { row.style.background = ''; }, 1200);
+  }, 800);
+}
+
+window.addEventListener('load', () => setTimeout(applyHashSelection, 1200));
+window.addEventListener('hashchange', () => {
+  const hash = window.location.hash;
+  if (hash.match(/^#climb-\d+$/)) applyHashSelection();
+});
+// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+// TRI DES COLONNES N°, Distance et Dénivelé
+// Desktop (climbs-body) + Mobile (climbs-body-m)
+// ═══════════════════════════════════════════════════
+(function() {
+  // État du tri par tableau
+  const state = { d: { col: null, dir: 1 }, m: { col: null, dir: 1 } };
+
+  // Extraction de la valeur selon la colonne
+  function getValue(row, col, isMobile) {
+    const cells = row.querySelectorAll('td');
+    if (col === 'num') return parseInt(cells[0].textContent) || 0;
+    if (isMobile) {
+      // Mobile : N°(0) Km dép.(1) Dist.(2) Dénivelé(3) Alt.S.(4)
+      if (col === 'dist') return parseInt(cells[2].textContent) || 0;
+      if (col === 'deni') { const m = cells[3].textContent.match(/([+-]?\d+)\s*m/); return m ? parseInt(m[1]) : 0; }
+    } else {
+      // Desktop : N°(0) Km dép(1) Km arr(2) Dist(3) Dén(4) Alt.dép(5) Alt.som(6)
+      if (col === 'dist') return parseInt(cells[3].textContent) || 0;
+      if (col === 'deni') { const m = cells[4].textContent.match(/([+-]?\d+)\s*m/); return m ? parseInt(m[1]) : 0; }
+    }
+    return 0;
+  }
+
+  function sortTable(col, isMobile) {
+    const key   = isMobile ? 'm' : 'd';
+    const tbodyId = isMobile ? 'climbs-body-m' : 'climbs-body';
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+
+    if (state[key].col === col) state[key].dir *= -1;
+    else { state[key].col = col; state[key].dir = 1; }
+
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    rows.sort((a, b) => (getValue(a, col, isMobile) - getValue(b, col, isMobile)) * state[key].dir);
+    rows.forEach(r => tbody.appendChild(r));
+
+    // Indicateurs visuels sur les th du bon tableau
+    const tableEl = isMobile
+      ? document.getElementById('climbs-body-m-wrap')
+      : document.querySelector('table:not(.tbl-m)');
+    if (tableEl) {
+      tableEl.querySelectorAll('thead th.sortable').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+        if (th.dataset.col === col) th.classList.add(state[key].dir === 1 ? 'sort-asc' : 'sort-desc');
+      });
+    }
+
+    // Réinitialiser la sélection active
+    if (!isMobile && selectedRow) {
+      selectedRow.classList.remove('selected');
+      selectedRow = null;
+      clearHighlight();
+      clearChartHighlight();
+      updateShareBtn(null);
+    }
+    if (isMobile && typeof selectedRowM !== 'undefined' && selectedRowM) {
+      selectedRowM.classList.remove('selected-m');
+      selectedRowM = null;
+      clearHighlightM();
+      const sb = document.getElementById('share-btn-m');
+      if (sb) sb.style.display = 'none';
+    }
+  }
+
+  // Attacher les événements — desktop immédiatement
+  document.querySelectorAll('table:not(.tbl-m) thead th.sortable').forEach(th => {
+    th.addEventListener('click', () => sortTable(th.dataset.col, false));
+  });
+
+  // Mobile : les lignes sont injectées après initMobile(), on attend le DOM
+  function attachMobileSortEvents() {
+    const wrap = document.getElementById('climbs-body-m-wrap');
+    if (!wrap) return;
+    wrap.querySelectorAll('thead th.sortable').forEach(th => {
+      th.addEventListener('click', () => sortTable(th.dataset.col, true));
+    });
+  }
+  // Attacher après que buildMobileTable() ait été appelé
+  window.addEventListener('load', () => setTimeout(attachMobileSortEvents, 600));
+})();
+
 let mpChart = null;
 
 function showMiniProfile(row, mouseX, mouseY) {
@@ -1333,12 +1477,19 @@ document.querySelectorAll('#climbs-body tr').forEach(row => {
 
 <!-- Onglet Carte (carte + profil) -->
 <div class="mobile-tab-content active" id="tab-carte">
+  <div class="card-title-m">
+    <span>🗺 Tracé du parcours <span class="sel-info" id="map-info-m"></span></span>
+    <button id="share-btn-m" onclick="shareClimbM()" style="display:none;padding:2px 9px;font-size:10px;font-weight:600;background:#fff;border:1px solid #bbb;border-radius:12px;cursor:pointer;color:#444;white-space:nowrap;flex-shrink:0;">🔗 Partager</button>
+  </div>
   <div style="position:relative;flex:1;min-height:0;">
-    <div class="card-title-m" style="position:absolute;top:0;left:0;right:0;z-index:500;background:rgba(255,255,255,.93);">
-      🗺 Tracé du parcours
-      <span class="sel-info" id="map-info-m"></span>
-    </div>
     <div id="map-m" style="position:absolute;inset:0;"></div>
+    <div id="slope-legend-m" style="display:none;position:absolute;bottom:28px;left:10px;z-index:1000;background:rgba(255,255,255,.92);border-radius:6px;padding:5px 10px;font-size:10px;font-weight:600;gap:8px;align-items:center;flex-wrap:wrap;box-shadow:0 1px 4px rgba(0,0,0,.2);">
+      <span style="color:#888">▬ Plat</span>
+      <span style="color:#27ae60">▬ 4–7 %</span>
+      <span style="color:#e67e22">▬ 7–10 %</span>
+      <span style="color:#c0392b">▬ ≥ 10 %</span>
+      <span style="color:#2980b9;opacity:.6;">▬ Descente</span>
+    </div>
   </div>
   <div class="chart-card-m">
     <div class="card-title-m">
@@ -1367,7 +1518,7 @@ document.querySelectorAll('#climbs-body tr').forEach(row => {
     <table class="tbl-m" id="climbs-body-m-wrap">
       <thead>
         <tr>
-          <th>N°</th><th>Km dép.</th><th>Dist.</th><th>Dénivelé</th><th>Alt. S.</th>
+          <th class="sortable" data-col="num" data-table="m" title="Trier par numéro">N°</th><th>Km dép.</th><th class="sortable" data-col="dist" data-table="m" title="Trier par distance">Dist.</th><th class="sortable" data-col="deni" data-table="m" title="Trier par dénivelé">Dénivelé</th><th>Alt. S.</th>
         </tr>
       </thead>
       <tbody id="climbs-body-m"></tbody>
@@ -1399,8 +1550,8 @@ function initMobile() {
   // Carte
   mapM = L.map('map-m').setView([50.1822, 5.6751], 12);
   const mLayerOSM  = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 });
-  const mLayerSat  = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 19 });
-  const mLayerTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap', maxZoom: 17 });
+  const mLayerSat  = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 19, crossOrigin: true });
+  const mLayerTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap', maxZoom: 17, crossOrigin: true });
   mLayerOSM.addTo(mapM);
   let mActiveLayer = mLayerOSM;
   let mSlopeLayerGroup = null;
@@ -1413,8 +1564,9 @@ function initMobile() {
     for (let i = 0; i < allPoints.length - 1; i++) {
       const i0 = Math.max(0, i - WIN), i1 = Math.min(allPoints.length - 1, i + WIN);
       const pct = (allDist[i1] - allDist[i0]) > 0 ? ((allElevFull[i1] - allElevFull[i0]) / ((allDist[i1] - allDist[i0]) * 1000)) * 100 : 0;
-      const color = pct >= 10 ? '#c0392b' : pct >= 7 ? '#e67e22' : pct >= 4 ? '#27ae60' : pct <= -4 ? '#2980b9' : '#888';
-      L.polyline([allPoints[i], allPoints[i + 1]], { color, weight: 3.5, opacity: 0.9 }).addTo(mSlopeLayerGroup);
+      const color   = pct >= 10 ? '#c0392b' : pct >= 7 ? '#e67e22' : pct >= 4 ? '#27ae60' : pct <= -4 ? '#2980b9' : '#888';
+      const opacity = pct <= -4 ? 0.35 : (pct > -4 && pct < 4) ? 0.5 : 0.9;
+      L.polyline([allPoints[i], allPoints[i + 1]], { color, weight: 3.5, opacity }).addTo(mSlopeLayerGroup);
     }
   }
   function enableSlopeModeM() {
@@ -1444,6 +1596,7 @@ function initMobile() {
         b.textContent = lbl; b.id = 'lbtn-'+id;
         b.style.cssText = 'padding:4px 8px;border:none;background:'+(lyr===mActiveLayer?'#2c3e50':'#fff')+';color:'+(lyr===mActiveLayer?'#fff':'#444')+';font-size:10px;font-weight:600;cursor:pointer;border-right:'+(idx<arr.length-1?'1px solid #eee':'none')+';';
         L.DomEvent.on(b,'click',e=>{ L.DomEvent.stopPropagation(e); mapM.removeLayer(mActiveLayer); mapM.addLayer(lyr); mActiveLayer=lyr;
+          setTimeout(() => mapM.invalidateSize(), 50);
           [['osm2',mLayerOSM],['sat2',mLayerSat],['topo2',mLayerTopo]].forEach(([i,l])=>{ const el=document.getElementById('lbtn-'+i); if(el){el.style.background=l===lyr?'#2c3e50':'#fff'; el.style.color=l===lyr?'#fff':'#444';} }); });
       });
       return d;
@@ -1465,7 +1618,7 @@ function initMobile() {
   Chart.register({
     id: 'climbBandsM',
     beforeDatasetsDraw(chart) {
-      if (chart.canvas.id !== 'altChartM' || mTraceMode !== 'climbs') return;
+      if (!chart.canvas || chart.canvas.id !== 'altChartM' || mTraceMode !== 'climbs') return;
       const { ctx, scales } = chart;
       ctx.save();
       mClimbAnnotations.forEach(({ startKm, endKm, color }) => {
@@ -1519,6 +1672,9 @@ function initMobile() {
     mTraceMode = mode;
     if (mode === 'slope') { buildSlopeLayersM(); mainPolylineM.setStyle({ opacity:0, weight:0 }); mSlopeLayerGroup.addTo(mapM); }
     if (mode === 'climbs') { buildClimbAnnotationsM(); showClimbsOnMapM(); altChartMInst && altChartMInst.update('none'); }
+    // Légende pente mobile
+    const legendM = document.getElementById('slope-legend-m');
+    if (legendM) legendM.style.display = mode === 'slope' ? 'flex' : 'none';
     ['none','slope','climbs'].forEach(m => {
       const el = document.getElementById('mtbtn-'+m);
       if (el) { el.style.background = m===mode?'#2c3e50':'#fff'; el.style.color = m===mode?'#fff':'#444'; }
@@ -1540,6 +1696,7 @@ function initMobile() {
     }
   });
   new mTraceCtrl().addTo(mapM);
+
   mainPolylineM = L.polyline(allPoints, { color: '#2980b9', weight: 3, opacity: .9 }).addTo(mapM);
   mapM.fitBounds(mainPolylineM.getBounds(), { padding: [30, 30] });
 
@@ -1602,7 +1759,7 @@ function initMobile() {
   Chart.register({
     id: 'customShadeM',
     beforeDatasetsDraw(chart) {
-      if (chart.canvas.id !== 'altChartM' || !climbAnnotationM) return;
+      if (!chart.canvas || chart.canvas.id !== 'altChartM' || !climbAnnotationM) return;
       const { ctx, scales } = chart;
       const x1 = scales.x.getPixelForValue(climbAnnotationM.startKm);
       const x2 = scales.x.getPixelForValue(climbAnnotationM.endKm);
@@ -1612,7 +1769,7 @@ function initMobile() {
       ctx.restore();
     },
     afterDatasetsDraw(chart) {
-      if (chart.canvas.id !== 'altChartM' || !climbAnnotationM) return;
+      if (!chart.canvas || chart.canvas.id !== 'altChartM' || !climbAnnotationM) return;
       const { ctx, scales } = chart;
       const x1 = scales.x.getPixelForValue(climbAnnotationM.startKm);
       const x2 = scales.x.getPixelForValue(climbAnnotationM.endKm);
@@ -1678,7 +1835,7 @@ function initMobile() {
   Chart.register({
     id: 'cursorLineM',
     afterDatasetsDraw(chart) {
-      if (!window._cursorActiveM || chart.canvas.id !== 'altChartM') return;
+      if (!chart.canvas || !window._cursorActiveM || chart.canvas.id !== 'altChartM') return;
       const { ctx, scales } = chart;
       const x = scales.x.getPixelForValue(window._cursorKmM || 0);
       const yTop = scales.y.top, yBot = scales.y.bottom;
@@ -1726,11 +1883,25 @@ function buildMobileTable() {
 }
 
 // Sélection côte mobile
+function shareClimbM() {
+  const num = document.getElementById('share-btn-m')._climbNum;
+  if (!num) return;
+  const url = window.location.href.replace(/#.*$/, '') + '#climb-' + num;
+  const btn = document.getElementById('share-btn-m');
+  navigator.clipboard.writeText(url).then(() => {
+    btn.innerHTML = '✓ Copié !';
+    btn.style.color = '#27ae60'; btn.style.borderColor = '#27ae60';
+    setTimeout(() => { btn.innerHTML = '🔗 Partager'; btn.style.color = '#444'; btn.style.borderColor = '#bbb'; }, 2000);
+  });
+}
+
 function selectClimbM(row) {
   if (selectedRowM === row) {
     row.classList.remove('selected-m');
     selectedRowM = null;
     clearHighlightM();
+    const sb = document.getElementById('share-btn-m');
+    if (sb) sb.style.display = 'none';
     return;
   }
   if (selectedRowM) selectedRowM.classList.remove('selected-m');
@@ -1741,8 +1912,12 @@ function selectClimbM(row) {
   const endIdx = parseInt(row.dataset.endIdx);
   const startKm = parseFloat(row.dataset.startKm);
   const endKm = parseFloat(row.dataset.endKm);
-  const num = row.querySelector('td').textContent;
+  const num = row.querySelector('td').textContent.trim();
   const label = `Côte #${num}`;
+
+  // Afficher le bouton partager
+  const sb = document.getElementById('share-btn-m');
+  if (sb) { sb._climbNum = num; sb.style.display = 'inline-block'; }
 
   highlightOnMapM(startIdx, endIdx, label);
   highlightOnChartM(startKm, endKm, label);
