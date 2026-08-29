@@ -8,415 +8,12 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4/dist/maplibre-gl.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4/dist/maplibre-gl.js"></script>
 
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      color: #222;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      overflow: hidden;
-    }
+  <link rel="stylesheet" href="style.css"/>
 
-    header {
-      background: #2c3e50;
-      color: #fff;
-      padding: 12px 24px;
-      display: flex;
-      align-items: baseline;
-      gap: 14px;
-      flex-shrink: 0;
-    }
-    header h1 { font-size: 1.15em; font-weight: 700; }
-    header span { font-size: 0.82em; opacity: .7; }
-
-    .stats-bar {
-      display: flex;
-      flex-wrap: wrap;
-      background: #34495e;
-      color: #fff;
-      flex-shrink: 0;
-    }
-    .stat {
-      padding: 8px 22px;
-      border-right: 1px solid rgba(255,255,255,.15);
-      font-size: 0.82em;
-    }
-    .stat strong { display: block; font-size: 1.1em; }
-
-    /* Layout 2 colonnes */
-    .layout {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
-
-    /* Colonne gauche */
-    .col-left {
-      width: 50%;
-      display: flex;
-      flex-direction: column;
-      border-right: 1px solid #d5d5d5;
-      background: #fff;
-      overflow: hidden;
-    }
-    .col-left-header {
-      font-size: 0.9em;
-      font-weight: 700;
-      color: #2c3e50;
-      padding: 10px 16px 8px;
-      border-bottom: 1px solid #eee;
-      flex-shrink: 0;
-    }
-
-    /* Filtres */
-    .filter-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-      padding: 10px 14px;
-      border-bottom: 1px solid #eee;
-      background: #fafafa;
-      flex-shrink: 0;
-    }
-    .filter-bar strong { font-size: 0.82em; color: #666; }
-    .filter-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 5px 11px;
-      border: 2px solid transparent;
-      border-radius: 20px;
-      cursor: pointer;
-      font-size: 0.78em;
-      font-weight: 700;
-      opacity: .4;
-      transition: opacity .15s, transform .1s, box-shadow .15s;
-      user-select: none;
-    }
-    .filter-btn.active {
-      opacity: 1;
-      box-shadow: 0 2px 7px rgba(0,0,0,.2);
-      transform: translateY(-1px);
-    }
-    .filter-btn .badge {
-      background: rgba(255,255,255,.30);
-      border-radius: 10px;
-      padding: 0px 6px;
-    }
-    .btn-vert   { background:#27ae60; color:#fff; border-color:#1e8449; }
-    .btn-orange { background:#e67e22; color:#fff; border-color:#ca6f1e; }
-    .btn-rouge  { background:#c0392b; color:#fff; border-color:#a93226; }
-    .btn-blanc  { background:#ecf0f1; color:#333; border-color:#bdc3c7; }
-    .btn-blanc .badge { background:rgba(0,0,0,.10); }
-    .btn-reset {
-      padding: 5px 11px;
-      border: 1px solid #ccc;
-      border-radius: 20px;
-      background: #fff;
-      color: #666;
-      font-size: .78em;
-      cursor: pointer;
-    }
-    .btn-reset:hover { background: #eee; }
-    #count-info { font-size: .78em; color: #999; }
-
-    /* Tableau */
-    .table-wrap { flex: 1; overflow-y: auto; overflow-x: auto; }
-    table { border-collapse: collapse; width: 100%; font-size: .82em; }
-    thead th {
-      background: #2c3e50;
-      color: #fff;
-      padding: 9px 10px;
-      text-align: center;
-      white-space: nowrap;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-    thead th.sortable {
-      cursor: pointer;
-      user-select: none;
-    }
-    thead th.sortable:hover { background: #3d5166; }
-    thead th.sort-asc::after  { content: ' ↑'; font-size: 11px; opacity: .9; }
-    thead th.sort-desc::after { content: ' ↓'; font-size: 11px; opacity: .9; }
-    tbody tr {
-      cursor: pointer;
-      transition: background .12s;
-    }
-    tbody tr:nth-child(even) { background: #f7f9fb; }
-    tbody td { padding: 7px 10px; border-bottom: 1px solid #eee; white-space: nowrap; }
-    tbody tr:hover { background: #e8f4fd !important; }
-    tbody tr.selected {
-      background: #d0eaff !important;
-      outline: 2px solid #2980b9;
-      outline-offset: -2px;
-    }
-    tbody tr.hidden { display: none; }
-    .no-result {
-      text-align: center; padding: 20px; color: #bbb;
-      font-style: italic; display: none;
-    }
-
-    /* Colonne droite */
-    .col-right {
-      width: 50%;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      background: #f2f2f2;
-    }
-    .map-card {
-      flex: 65;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      position: relative;
-    }
-    .card-title {
-      font-size: 0.88em;
-      font-weight: 700;
-      color: #2c3e50;
-      padding: 10px 16px 8px;
-      border-bottom: 1px solid #ddd;
-      background: #fff;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .card-title .selection-info {
-      font-size: 0.82em;
-      font-weight: 400;
-      color: #2980b9;
-      font-style: italic;
-    }
-    #map { flex: 1; width: 100%; }
-
-
-    .chart-card {
-      flex: 35;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-      background: #fff;
-      border-top: 1px solid #ddd;
-    }
-    .chart-wrap {
-      flex: 1;
-      min-height: 0;
-      padding: 10px 14px 12px;
-      position: relative;
-    }
-    #altChart { position: absolute; inset: 10px 14px 12px; width: calc(100% - 28px) !important; height: calc(100% - 22px) !important; }
-
-    /* ═══════════════════════════════════════════════
-       NAVIGATION MOBILE (cachée sur desktop)
-    ═══════════════════════════════════════════════ */
-    .mobile-nav { display: none; }
-    .mobile-tab-content { display: none; }
-
-    @media (max-width: 768px) {
-      /* Layout global mobile : flex colonne sur toute la hauteur */
-      body { overflow: hidden; height: 100dvh; display: flex; flex-direction: column; }
-      header { padding: 10px 14px; flex-wrap: wrap; gap: 4px; flex-shrink: 0; }
-      header h1 { font-size: 1em; }
-      header span { font-size: 0.75em; display: block; width: 100%; }
-
-      /* Stats bar : 2 colonnes */
-      .stat { padding: 6px 12px; font-size: 0.78em; flex-shrink: 0; }
-      .stat strong { font-size: 1em; }
-      .stats-bar { flex-shrink: 0; }
-
-      /* Layout : cacher les 2 colonnes desktop, afficher onglets */
-      .layout { display: none; }
-
-      /* Navigation onglets mobile */
-      .mobile-nav {
-        display: flex;
-        background: #fff;
-        border-bottom: 2px solid #e0e0e0;
-        z-index: 1000;
-        flex-shrink: 0;
-      }
-      .mobile-tab {
-        flex: 1;
-        padding: 11px 6px 9px;
-        text-align: center;
-        font-size: 0.8em;
-        font-weight: 700;
-        color: #888;
-        cursor: pointer;
-        border-bottom: 3px solid transparent;
-        transition: color .15s, border-color .15s;
-        background: none;
-        border-top: none;
-        border-left: none;
-        border-right: none;
-      }
-      .mobile-tab.active {
-        color: #2c3e50;
-        border-bottom-color: #2980b9;
-      }
-
-      /* Contenus onglets — flex:1 pour remplir l'espace restant */
-      .mobile-tab-content { display: none; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
-      .mobile-tab-content.active { display: flex; }
-
-      /* Vue Carte */
-      #tab-carte { overflow: hidden; }
-      #tab-carte #map-m {
-        flex: 1;
-        min-height: 0;
-      }
-      #tab-carte .chart-card-m {
-        flex: 0 0 185px;
-        background: #fff;
-        border-top: 1px solid #ddd;
-        display: flex;
-        flex-direction: column;
-      }
-      #tab-carte .card-title-m {
-        font-size: 0.82em;
-        font-weight: 700;
-        color: #2c3e50;
-        padding: 7px 12px 5px;
-        border-bottom: 1px solid #eee;
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        background: #fff;
-      }
-      #tab-carte .card-title-m .sel-info {
-        font-size: 0.82em;
-        font-weight: 400;
-        color: #2980b9;
-        font-style: italic;
-        margin-left: 4px;
-      }
-      #tab-carte .chart-wrap-m {
-        flex: 1;
-        padding: 8px 10px 10px;
-      }
-      #altChartM { width: 100% !important; }
-
-      /* Vue Tableau */
-      #tab-tableau { overflow: hidden; }
-      .mobile-col-header {
-        font-size: 0.82em;
-        font-weight: 700;
-        color: #2c3e50;
-        padding: 8px 12px 6px;
-        border-bottom: 1px solid #eee;
-        flex-shrink: 0;
-      }
-      .filter-bar-m {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        align-items: center;
-        padding: 8px 10px;
-        border-bottom: 1px solid #eee;
-        background: #fafafa;
-        flex-shrink: 0;
-      }
-      .filter-bar-m strong { font-size: 0.78em; color: #666; }
-      .filter-btn-m {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 4px 10px;
-        border: 2px solid transparent;
-        border-radius: 20px;
-        cursor: pointer;
-        font-size: 0.72em;
-        font-weight: 700;
-        opacity: .4;
-        transition: opacity .15s, transform .1s;
-        user-select: none;
-      }
-      .filter-btn-m.active { opacity: 1; transform: translateY(-1px); box-shadow: 0 1px 5px rgba(0,0,0,.18); }
-      .filter-btn-m .badge { background: rgba(255,255,255,.28); border-radius: 10px; padding: 0 5px; }
-      .btn-vert-m   { background:#27ae60; color:#fff; border-color:#1e8449; }
-      .btn-orange-m { background:#e67e22; color:#fff; border-color:#ca6f1e; }
-      .btn-rouge-m  { background:#c0392b; color:#fff; border-color:#a93226; }
-      .btn-blanc-m  { background:#ecf0f1; color:#333; border-color:#bdc3c7; }
-      .btn-blanc-m .badge { background:rgba(0,0,0,.10); }
-      .btn-reset-m {
-        padding: 4px 10px;
-        border: 1px solid #ccc;
-        border-radius: 20px;
-        background: #fff;
-        color: #666;
-        font-size: .72em;
-        cursor: pointer;
-      }
-      #count-info-m { font-size:.72em; color:#999; }
-
-      .table-wrap-m { flex: 1; overflow-y: auto; overflow-x: auto; }
-      .tbl-m { border-collapse: collapse; width: 100%; font-size: .78em; }
-      .tbl-m thead th {
-        background: #2c3e50;
-        color: #fff;
-        padding: 8px 8px;
-        text-align: center;
-        white-space: nowrap;
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        font-size: .75em;
-      }
-      .tbl-m tbody td {
-        padding: 7px 8px;
-        border-bottom: 1px solid #eee;
-        white-space: nowrap;
-        text-align: center;
-      }
-      .tbl-m tbody tr { cursor: pointer; }
-      .tbl-m tbody tr:nth-child(even) td { background: #f7f9fb; }
-      .tbl-m tbody tr:hover td { background: #e8f4fd !important; }
-      .tbl-m tbody tr.selected-m td { background: #d0eaff !important; outline: 1.5px solid #2980b9; }
-      .tbl-m tbody tr.hidden { display: none; }
-      .no-result-m { text-align:center; padding:16px; color:#bbb; font-style:italic; display:none; font-size:.82em; }
-
-      /* Bottom nav */
-      .bottom-nav-m {
-        display: flex;
-        background: #fff;
-        border-top: 1px solid #e0e0e0;
-        padding: 8px 0 env(safe-area-inset-bottom, 8px);
-        flex-shrink: 0;
-      }
-      .nav-item-m {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 2px;
-        font-size: 0.72em;
-        color: #999;
-        cursor: pointer;
-        padding: 2px 0;
-      }
-      .nav-item-m.active { color: #2980b9; }
-      .nav-item-m i { font-size: 20px; }
-    }
-    /* ── Mini-profil au survol ── */
-    #mini-profile { position:fixed; display:none; background:#fff; border:0.5px solid #ddd; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.15); padding:8px 10px 6px; z-index:9999; pointer-events:none; width:220px; }
-    #mini-profile .mp-title { font-size:11px; font-weight:700; color:#2c3e50; margin:0 0 4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    #mini-profile .mp-stats { display:flex; gap:8px; margin-bottom:5px; }
-    #mini-profile .mp-stat { display:flex; flex-direction:column; font-size:10px; }
-    #mini-profile .mp-stat span:first-child { color:#888; }
-    #mini-profile .mp-stat span:last-child  { font-weight:700; color:#2c3e50; }
-    #mp-canvas { width:100% !important; height:60px !important; display:block; }
-  </style>
-</head>
+  </head>
 <body>
 
 <header>
@@ -470,9 +67,13 @@
     <div class="map-card">
       <div class="card-title">
         <span>🗺 Tracé du parcours <span class="selection-info" id="map-info"></span></span>
-        <button id="share-btn" onclick="shareClimb()" style="display:none;padding:3px 10px;font-size:11px;font-weight:600;background:#fff;border:1px solid #bbb;border-radius:12px;cursor:pointer;color:#444;white-space:nowrap;flex-shrink:0;" title="Copier le lien vers cette côte">🔗 Partager</button>
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+          <button id="btn-3d" onclick="toggle3D()" class="btn-3d-toggle" title="Vue 3D terrain">3D</button>
+          <button id="share-btn" onclick="shareClimb()" style="display:none;padding:3px 10px;font-size:11px;font-weight:600;background:#fff;border:1px solid #bbb;border-radius:12px;cursor:pointer;color:#444;white-space:nowrap;" title="Copier le lien vers cette côte">🔗 Partager</button>
+        </div>
       </div>
       <div id="map"></div>
+      <div id="map3d"></div>
       <div id="slope-legend" style="display:none;position:absolute;bottom:28px;left:10px;z-index:1000;background:rgba(255,255,255,.92);border-radius:6px;padding:5px 10px;font-size:10px;font-weight:600;gap:10px;align-items:center;box-shadow:0 1px 4px rgba(0,0,0,.2);">
         <span style="color:#888">▬ Plat</span>
         <span style="color:#27ae60">▬ 4–7 %</span>
@@ -483,9 +84,13 @@
     </div>
 
     <div class="chart-card">
-      <div class="card-title">
-        📈 Profil altimétrique
+      <div class="profile-header">
+        <span class="profile-title">Profil de course</span>
         <span class="selection-info" id="chart-info"></span>
+      </div>
+      <div class="profile-tabs">
+        <button class="profile-tab active" onclick="switchProfileTab('climbs', this)">Côtes</button>
+        <button class="profile-tab" onclick="switchProfileTab('slope', this)">Pente</button>
       </div>
       <div class="chart-wrap">
         <canvas id="altChart"></canvas>
@@ -511,6 +116,33 @@ const allElevFull= [230.7, 230.8, 230.6, 230.6, 230.4, 230.2, 230.0, 232.6, 235.
 // Profil sous-échantillonné pour Chart.js
 const chartKm  = [0.0, 0.27, 0.43, 0.66, 0.82, 0.95, 1.08, 1.3, 1.51, 1.65, 1.9, 2.15, 2.4, 2.63, 2.93, 3.2, 3.49, 3.74, 4.07, 4.29, 4.45, 4.91, 5.01, 5.25, 5.6, 5.81, 5.92, 6.24, 6.57, 6.84, 7.09, 7.31, 7.59, 7.78, 7.96, 8.12, 8.28, 8.61, 8.94, 9.29, 9.45, 9.59, 9.99, 10.62, 10.91, 11.11, 11.22, 11.4, 11.55, 11.72, 11.98, 12.22, 12.52, 12.86, 13.33, 13.5, 13.92, 14.15, 14.45, 14.68, 14.95, 15.24, 15.37, 15.73, 15.89, 16.39, 16.73, 17.05, 17.53, 17.88, 18.24, 18.51, 18.92, 19.32, 19.55, 19.67, 20.08, 20.46, 20.59, 20.67, 20.87, 21.21, 21.38, 21.66, 21.97, 22.26, 23.37, 23.99, 24.32, 24.86, 25.72, 26.52, 26.95, 27.67, 27.8, 28.43, 29.37, 29.5, 29.78, 29.87, 30.01, 30.22, 30.49, 30.84, 30.97, 31.31, 31.7, 32.0, 32.15, 32.34, 32.55, 32.74, 32.91, 33.16, 33.51, 33.73, 33.96, 34.17, 34.37, 34.67, 34.93, 35.84, 35.93, 36.07, 36.39, 36.56, 37.2, 37.44, 38.01, 38.15, 38.37, 38.81, 38.93, 39.04, 39.28, 39.6, 39.84, 40.27, 40.89, 41.12, 41.52, 41.86, 42.13, 42.48, 42.89, 43.33, 43.57, 43.87, 43.99, 44.21, 44.57, 44.81, 44.99, 45.27, 45.35, 45.56, 45.81, 46.22, 46.39, 46.72, 47.25, 47.44, 47.6, 47.69, 47.83, 48.0, 48.29, 48.46, 48.64, 48.81, 48.91, 48.99, 49.07, 49.19, 49.38, 49.62, 49.75, 50.0, 50.28, 50.51, 50.69, 50.78, 50.97, 51.06, 51.2, 51.29, 51.41, 51.54, 51.74, 52.03, 52.3, 52.61, 52.89, 53.22, 53.61, 53.94, 54.54, 54.68, 55.12, 55.48, 55.57, 55.63, 55.78, 55.83, 55.89, 55.98, 56.08, 56.17, 56.43, 56.86, 57.08, 57.26, 57.79, 58.07, 58.19, 58.49, 58.78, 59.23, 59.43, 59.76, 59.96, 60.1, 60.19, 60.29, 60.42, 60.57, 60.61, 60.75, 60.88, 61.0, 61.2, 61.36, 61.57, 61.76, 61.99, 62.18, 62.31, 62.53, 62.73, 62.85, 63.01, 63.33, 63.52, 63.71, 63.96, 64.22, 64.37, 64.58, 64.82, 65.06, 65.21, 65.34, 65.48, 65.71, 65.88, 66.08, 66.4, 66.49, 66.63, 66.89, 67.11, 67.43, 67.64, 67.87, 68.31, 68.54, 68.87, 69.21, 69.43, 69.63, 69.76, 69.99, 70.16, 70.36, 70.46, 70.68, 70.87, 71.04, 71.24, 71.39, 71.72, 71.82, 71.96, 72.11, 72.25, 72.4, 72.5, 72.61, 72.78, 72.95, 73.17, 73.32, 73.5, 73.74, 73.9, 74.02, 74.19, 74.28, 74.42, 74.57, 74.74, 75.0, 75.43, 75.59, 75.84, 76.08, 76.18, 76.28, 76.4, 76.47, 76.59, 76.71, 76.91, 77.15, 77.3, 77.46, 77.61, 77.76, 77.96, 78.15, 78.26, 78.32, 78.58, 78.8, 79.13, 79.37, 79.46, 79.64, 79.99, 80.31, 80.49, 80.62, 80.84, 80.97, 81.08, 81.25, 81.44, 81.51, 81.62, 81.77, 81.95, 82.42, 82.67, 82.75, 82.91, 83.07, 83.2, 83.28, 83.39, 83.45, 83.53, 83.68, 83.98, 84.25, 84.5, 84.73, 84.89, 85.02, 85.13, 85.21, 85.33, 85.39, 85.53, 85.73, 85.94, 86.07, 86.14, 86.24, 86.35, 86.51, 86.59, 86.67, 86.75, 86.84, 86.98, 87.1, 87.2, 87.32, 87.56, 87.72, 87.99, 88.19, 88.43, 88.54, 88.63, 88.7, 88.96, 89.05, 89.16, 89.29, 89.42, 89.45, 89.54, 89.69, 89.79, 89.9, 89.95, 90.0, 90.08, 90.14, 90.19, 90.28, 90.41, 90.64, 90.8, 90.92, 91.12, 91.31, 91.59, 91.93, 92.31, 92.39, 92.64, 92.72, 92.84, 92.92, 93.07, 93.27, 93.41, 93.64, 93.77, 93.87, 93.96, 94.11, 94.47, 94.66, 94.85, 95.21, 95.45, 95.68, 95.95, 96.12, 96.24, 96.38, 96.52, 96.88, 97.19, 97.35, 97.51, 97.59, 97.7, 97.95, 98.15, 98.35, 98.6, 98.77, 99.05, 99.19, 99.35, 99.45, 99.73, 99.91, 100.12, 100.22];
 const chartEle = [230.7, 230.2, 245.4, 283.6, 320.2, 329.4, 344.0, 366.6, 393.8, 399.0, 397.4, 380.6, 364.2, 345.4, 328.8, 323.6, 342.0, 336.6, 322.4, 318.2, 334.6, 358.6, 368.8, 403.2, 433.0, 447.6, 457.8, 479.4, 500.2, 515.8, 525.2, 524.8, 510.8, 501.0, 488.0, 479.2, 477.8, 484.2, 494.0, 494.2, 470.8, 456.2, 446.8, 452.6, 482.4, 493.2, 498.4, 519.8, 530.4, 537.4, 555.8, 557.6, 552.0, 563.0, 566.4, 561.0, 550.2, 547.8, 547.8, 557.4, 558.6, 555.6, 562.8, 580.6, 579.8, 581.2, 591.0, 598.0, 608.0, 606.0, 590.6, 591.8, 596.0, 563.4, 540.2, 542.6, 573.2, 573.4, 573.8, 566.0, 580.4, 601.2, 613.0, 626.6, 639.2, 635.6, 618.2, 621.2, 620.0, 610.0, 601.0, 581.8, 586.8, 573.0, 575.0, 563.2, 541.0, 540.2, 550.2, 550.8, 542.8, 529.6, 516.4, 513.2, 518.8, 524.8, 525.4, 496.6, 499.4, 496.8, 497.0, 497.4, 487.8, 481.4, 480.4, 476.0, 494.0, 512.0, 537.6, 546.6, 555.2, 546.6, 530.0, 518.4, 529.4, 531.2, 524.4, 514.2, 504.6, 496.2, 502.2, 528.8, 538.2, 540.4, 547.8, 570.2, 565.6, 523.4, 497.2, 485.2, 479.0, 481.4, 475.2, 471.4, 466.6, 460.0, 440.0, 419.2, 419.6, 416.0, 414.2, 404.6, 402.6, 393.8, 393.8, 393.6, 404.8, 414.2, 413.8, 390.6, 367.8, 381.6, 398.4, 398.0, 395.2, 398.4, 425.4, 425.2, 403.8, 374.2, 372.2, 375.2, 377.0, 375.6, 366.0, 360.4, 359.8, 353.2, 348.2, 346.8, 343.4, 333.8, 328.0, 325.0, 330.4, 331.2, 338.0, 333.2, 335.4, 332.2, 338.4, 330.6, 329.0, 330.2, 343.8, 363.0, 387.6, 401.4, 391.8, 336.6, 310.2, 311.2, 313.2, 309.4, 307.6, 309.6, 315.2, 320.4, 333.2, 380.2, 388.0, 389.2, 412.2, 423.4, 432.4, 440.8, 438.4, 423.2, 406.6, 391.0, 380.0, 362.6, 343.2, 335.6, 339.0, 338.0, 339.0, 336.8, 330.4, 347.2, 367.4, 386.8, 395.6, 397.6, 391.0, 401.0, 390.0, 374.2, 336.2, 325.4, 314.8, 297.6, 307.4, 322.2, 303.6, 295.2, 305.2, 297.4, 295.8, 295.8, 301.8, 304.0, 307.0, 309.2, 308.2, 297.4, 307.2, 317.6, 302.8, 299.0, 306.8, 306.0, 299.0, 297.6, 293.6, 292.0, 300.0, 301.6, 296.2, 301.2, 299.8, 294.6, 301.0, 313.0, 308.4, 293.2, 293.2, 306.4, 308.2, 311.2, 337.4, 350.0, 342.2, 324.6, 312.4, 306.6, 296.8, 305.4, 306.4, 303.4, 303.8, 306.0, 305.8, 298.6, 303.6, 322.4, 334.0, 342.0, 354.0, 360.8, 348.8, 333.4, 319.4, 291.6, 274.6, 274.2, 289.4, 298.0, 320.4, 337.6, 359.4, 373.8, 372.6, 394.0, 399.2, 394.8, 393.2, 392.0, 365.6, 316.4, 283.2, 295.8, 325.8, 324.8, 332.6, 313.2, 288.6, 264.8, 271.8, 270.8, 269.6, 275.2, 323.0, 323.6, 313.6, 314.4, 291.8, 288.4, 282.4, 276.6, 279.4, 279.6, 275.2, 287.4, 323.0, 352.0, 357.2, 369.0, 373.0, 376.0, 386.2, 394.4, 382.4, 361.2, 350.0, 318.6, 304.6, 283.8, 280.2, 298.8, 324.4, 348.6, 374.8, 399.6, 390.8, 373.6, 370.2, 385.2, 387.2, 391.8, 376.8, 359.6, 344.8, 328.0, 308.6, 288.0, 266.6, 262.8, 264.4, 271.8, 276.0, 272.4, 263.4, 275.2, 297.0, 315.2, 329.4, 331.6, 336.2, 332.6, 318.4, 312.8, 309.4, 310.6, 310.8, 318.0, 324.8, 330.4, 341.4, 348.8, 356.2, 367.6, 378.4, 394.2, 397.0, 398.8, 410.6, 407.8, 401.8, 405.6, 416.6, 422.8, 414.2, 402.8, 402.0, 400.4, 394.6, 378.2, 351.0, 296.8, 274.8, 272.0, 280.2, 299.6, 313.2, 325.8, 340.4, 353.2, 369.0, 384.6, 390.6, 398.6, 404.8, 434.2, 442.6, 431.4, 429.0, 410.8, 373.0, 359.4, 354.6, 380.4, 393.4, 399.2, 397.8, 384.8, 352.6, 335.0, 324.2, 302.8, 258.0, 232.6, 230.6, 230.7];
+
+// D+ cumulé pour chaque point du graphique
+const chartCumDplus = [0];
+for (let i = 1; i < chartEle.length; i++) {
+  const diff = chartEle[i] - chartEle[i - 1];
+  chartCumDplus.push(chartCumDplus[i - 1] + (diff > 0 ? diff : 0));
+}
+
+// Couleurs de pente pré-calculées pour chaque point du graphique (même logique que buildSlopeLayers)
+const chartSlopeColors = chartKm.map(km => {
+  let idx = 0, best = Infinity;
+  for (let i = 0; i < allDist.length; i++) {
+    const d = Math.abs(allDist[i] - km);
+    if (d < best) { best = d; idx = i; }
+    if (allDist[i] > km + 0.5) break;
+  }
+  const WIN = 6;
+  const i0 = Math.max(0, idx - WIN), i1 = Math.min(allDist.length - 1, idx + WIN);
+  const pct = (allDist[i1] - allDist[i0]) > 0
+    ? (allElevFull[i1] - allElevFull[i0]) / ((allDist[i1] - allDist[i0]) * 1000) * 100
+    : 0;
+  if (pct >= 10)  return '#c0392b';
+  if (pct >= 7)   return '#e67e22';
+  if (pct >= 4)   return '#27ae60';
+  if (pct <= -4)  return '#2980b9';
+  return '#aaa';
+});
 
 // ═══════════════════════════════════════════════════
 // CARTE LEAFLET
@@ -707,6 +339,12 @@ Chart.register({
   }
 });
 
+function switchProfileTab(mode, el) {
+  document.querySelectorAll('.profile-tab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  setTraceMode(mode);
+}
+
 function setTraceMode(mode) {
   const prev = traceMode;
   traceMode = mode;
@@ -738,8 +376,23 @@ function setTraceMode(mode) {
     climbBadgeLayer.addTo(map);
   }
 
-  // Toujours redessiner le profil (bandes côtes on/off)
-  altChart && altChart.update('none');
+  // Mettre à jour le rendu du graphique selon le mode
+  if (altChart) {
+    const ds = altChart.data.datasets[0];
+    if (mode === 'slope') {
+      ds.segment = {
+        borderColor: ctx => chartSlopeColors[ctx.p0DataIndex] || '#aaa',
+        backgroundColor: ctx => (chartSlopeColors[ctx.p0DataIndex] || '#aaa') + '28'
+      };
+      ds.borderColor = '#aaa';
+      ds.backgroundColor = 'transparent';
+    } else {
+      ds.segment = undefined;
+      ds.borderColor = '#e8002d';
+      ds.backgroundColor = 'rgba(232,0,45,0.12)';
+    }
+    altChart.update('none');
+  }
 
   // Mettre à jour les 3 boutons radio
   ['none','slope','climbs'].forEach(m => {
@@ -753,6 +406,152 @@ function setTraceMode(mode) {
 // Rétrocompat pour clearHighlight
 function enableSlopeMode()  { setTraceMode('slope'); }
 function disableSlopeMode() { setTraceMode('none');  }
+
+// ══════════════════════════════════════════════════════════════
+// VUE 3D — MapLibre GL JS + terrain DEM AWS (sans API key)
+// ══════════════════════════════════════════════════════════════
+let map3dInst = null;
+let is3D = false;
+let map3dCoords = null;
+let map3dCurrentStyle = 'liberty';
+
+// Style inline pour OpenTopoMap (courbes de niveau natives)
+const TOPO_STYLE = {
+  version: 8,
+  sources: {
+    topo: {
+      type: 'raster',
+      tiles: ['https://tile.opentopomap.org/{z}/{x}/{y}.png'],
+      tileSize: 256, maxzoom: 17,
+      attribution: '© OpenTopoMap (CC-BY-SA) | © OpenStreetMap contributors'
+    }
+  },
+  layers: [{ id: 'topo-base', type: 'raster', source: 'topo' }]
+};
+
+const MAP3D_STYLES = {
+  liberty:  { url: 'https://tiles.openfreemap.org/styles/liberty',                         label: 'Terrain', exag: 1.6 },
+  bright:   { url: 'https://tiles.openfreemap.org/styles/bright',                          label: 'Streets', exag: 1.0 },
+  positron: { url: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',        label: 'Light',   exag: 0.8 },
+  dark:     { url: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',     label: 'Dark',    exag: 0.8 },
+  topo:     { url: TOPO_STYLE,                                                              label: 'Topo',    exag: 1.4 }
+};
+
+function toggle3D() {
+  is3D = !is3D;
+  const mapEl   = document.getElementById('map');
+  const map3dEl = document.getElementById('map3d');
+  const btn     = document.getElementById('btn-3d');
+  if (is3D) {
+    mapEl.style.display   = 'none';
+    map3dEl.style.display = 'block';
+    btn.classList.add('active');
+    btn.textContent = '2D';
+    document.getElementById('slope-legend').style.display = 'none';
+    init3DMap();
+  } else {
+    mapEl.style.display   = '';
+    map3dEl.style.display = 'none';
+    btn.classList.remove('active');
+    btn.textContent = '3D';
+    map.invalidateSize();
+  }
+}
+
+function _add3DTerrainAndTrace(exag) {
+  map3dInst.addSource('dem', {
+    type: 'raster-dem',
+    tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+    encoding: 'terrarium', tileSize: 256, maxzoom: 14
+  });
+  map3dInst.setTerrain({ source: 'dem', exaggeration: exag });
+  map3dInst.setSky({
+    'sky-color': '#c8e8ff', 'sky-horizon-blend': 0.5,
+    'horizon-color': '#e8f4ff', 'horizon-fog-blend': 0.1,
+    'fog-color': '#c8dcf0', 'fog-ground-blend': 0.9
+  });
+  map3dInst.addLayer({
+    id: 'terrain-hillshade', type: 'hillshade', source: 'dem',
+    paint: {
+      'hillshade-illumination-direction': 315,
+      'hillshade-exaggeration': 0.4,
+      'hillshade-shadow-color': '#1a2744',
+      'hillshade-highlight-color': '#ffffff',
+      'hillshade-accent-color': '#1a2744'
+    }
+  });
+  map3dInst.addSource('trace', {
+    type: 'geojson',
+    data: { type: 'Feature', geometry: { type: 'LineString', coordinates: map3dCoords } }
+  });
+  map3dInst.addLayer({
+    id: 'trace-shadow', type: 'line', source: 'trace',
+    paint: { 'line-color': '#000', 'line-width': 5, 'line-opacity': 0.15, 'line-blur': 3 },
+    layout: { 'line-cap': 'round', 'line-join': 'round' }
+  });
+  map3dInst.addLayer({
+    id: 'trace-line', type: 'line', source: 'trace',
+    paint: { 'line-color': '#e8002d', 'line-width': 3.5, 'line-opacity': 0.95 },
+    layout: { 'line-cap': 'round', 'line-join': 'round' }
+  });
+}
+
+function setMap3DStyle(key) {
+  if (!map3dInst || key === map3dCurrentStyle) return;
+  map3dCurrentStyle = key;
+  document.querySelectorAll('.m3d-style-thumb').forEach(el =>
+    el.classList.toggle('m3d-active', el.dataset.style === key)
+  );
+  map3dInst.setStyle(MAP3D_STYLES[key].url);
+  map3dInst.once('style.load', () => _add3DTerrainAndTrace(MAP3D_STYLES[key].exag));
+}
+
+function init3DMap() {
+  if (map3dInst) { map3dInst.resize(); return; }
+
+  map3dCoords = allPoints.map((p, i) => [p[1], p[0], allElevFull[i] || 0]);
+  const lngs = allPoints.map(p => p[1]);
+  const lats  = allPoints.map(p => p[0]);
+  const bbox  = [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]];
+
+  map3dInst = new maplibregl.Map({
+    container: 'map3d',
+    style: MAP3D_STYLES.liberty.url,
+    center: [(bbox[0][0] + bbox[1][0]) / 2, (bbox[0][1] + bbox[1][1]) / 2],
+    zoom: 11, pitch: 35, bearing: -15, antialias: true
+  });
+  map3dInst.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+
+  // Panneau de styles (positionné à gauche des contrôles nav)
+  const panel = document.createElement('div');
+  panel.className = 'm3d-style-panel';
+  const baseKeys = ['liberty', 'bright', 'positron', 'dark'];
+  panel.innerHTML = `
+    <div class="m3d-panel-title">Fond de carte</div>
+    <div class="m3d-styles-grid">
+      ${baseKeys.map(key => `
+        <div class="m3d-style-thumb ${key === 'liberty' ? 'm3d-active' : ''}" data-style="${key}" onclick="setMap3DStyle('${key}')">
+          <div class="m3d-thumb-icon m3d-thumb-${key}"></div>
+          <span>${MAP3D_STYLES[key].label}</span>
+        </div>`).join('')}
+    </div>
+    <div class="m3d-style-thumb m3d-topo-btn" data-style="topo" onclick="setMap3DStyle('topo')">
+      <div class="m3d-thumb-icon m3d-thumb-topo"></div>
+      <span>Topo (courbes)</span>
+    </div>`;
+  document.getElementById('map3d').appendChild(panel);
+
+  map3dInst.on('load', () => {
+    _add3DTerrainAndTrace(MAP3D_STYLES.liberty.exag);
+
+    const mkS = document.createElement('div'); mkS.className = 'm3d-marker-start';
+    new maplibregl.Marker({ element: mkS }).setLngLat(map3dCoords[0]).addTo(map3dInst);
+    const mkE = document.createElement('div'); mkE.className = 'm3d-marker-end';
+    new maplibregl.Marker({ element: mkE }).setLngLat(map3dCoords[map3dCoords.length - 1]).addTo(map3dInst);
+
+    map3dInst.fitBounds(bbox, { padding: 60, pitch: 35, bearing: -15, duration: 1200 });
+  });
+}
 
 // ── Contrôle 2 : tracé (radio Aucun · Pente · Côtes) ──────────────
 const traceControl = L.Control.extend({
@@ -935,9 +734,9 @@ let cursorKm = 0;
 // Marqueur curseur sur la carte
 const cursorIcon = L.divIcon({
   html: `<div id="cursor-dot" style="
-    background:#e74c3c;border:2.5px solid #fff;
+    background:#1a2744;border:2.5px solid #fff;
     border-radius:50%;width:14px;height:14px;
-    box-shadow:0 0 0 3px rgba(231,76,60,.35);
+    box-shadow:0 0 0 3px rgba(26,39,68,.3);
     transition:none;
   "></div>`,
   className: '',
@@ -963,14 +762,14 @@ Chart.register({
     const x = scales.x.getPixelForValue(cursorKm);
     const yTop = scales.y.top, yBot = scales.y.bottom;
     ctx.save();
-    ctx.strokeStyle = '#e74c3c';
+    ctx.strokeStyle = '#1a2744';
     ctx.lineWidth = 1.5;
     ctx.setLineDash([]);
     ctx.beginPath(); ctx.moveTo(x, yTop); ctx.lineTo(x, yBot); ctx.stroke();
     // Petit point sur la courbe
     const ele = allElevFull[idxAtKm(cursorKm)];
     const y = scales.y.getPixelForValue(ele);
-    ctx.fillStyle = '#e74c3c';
+    ctx.fillStyle = '#1a2744';
     ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
@@ -996,6 +795,8 @@ function startCursor() {
 function stopCursor() {
   cursorActive = false;
   if (cursorMarker) { map.removeLayer(cursorMarker); cursorMarker = null; }
+  const ttEl = document.getElementById('altchart-tooltip');
+  if (ttEl) ttEl.style.opacity = '0';
   altChart.update('none');
 }
 
@@ -1032,9 +833,9 @@ const altChart = new Chart(ctx, {
         label: 'Altitude (m)',
         data: chartEle,
         fill: true,
-        backgroundColor: 'rgba(39,174,96,0.18)',
-        borderColor: '#27ae60',
-        borderWidth: 1.8,
+        backgroundColor: 'rgba(232,0,45,0.12)',
+        borderColor: '#e8002d',
+        borderWidth: 1.1,
         pointRadius: 0,
         tension: 0.3,
         order: 2
@@ -1044,7 +845,7 @@ const altChart = new Chart(ctx, {
         label: 'Côte sélectionnée',
         data: [],
         fill: false,
-        borderColor: '#e74c3c',
+        borderColor: '#1a2744',
         borderWidth: 3,
         pointRadius: 0,
         tension: 0.3,
@@ -1059,32 +860,86 @@ const altChart = new Chart(ctx, {
     plugins: {
       legend: { display: false },
       tooltip: {
-        callbacks: {
-          title: items => {
-            const km = parseFloat(items[0].label);
-            return km.toFixed(2) + ' km';
-          },
-          label: item => {
-            if (item.datasetIndex !== 0) return ' ★ ' + item.raw + ' m';
-            const ele = item.raw;
-            // Calcul pente : chercher le point GPX le plus proche et estimer la pente sur ~200m
-            const km = parseFloat(item.label);
-            let idx = 0, best = Infinity;
-            for (let i = 0; i < allDist.length; i++) {
-              const d = Math.abs(allDist[i] - km);
-              if (d < best) { best = d; idx = i; }
-              if (allDist[i] > km + 0.3) break;
-            }
-            // Pente sur fenêtre de ±10 points
-            const w = 10;
-            const i0 = Math.max(0, idx - w);
-            const i1 = Math.min(allDist.length - 1, idx + w);
-            const dElev = allElevFull[i1] - allElevFull[i0];
-            const dDist = (allDist[i1] - allDist[i0]) * 1000;
-            const pct = dDist > 0 ? (dElev / dDist * 100) : 0;
-            const sign = pct > 0 ? '+' : '';
-            return ' ' + ele + ' m   ' + sign + pct.toFixed(1) + ' %';
+        enabled: false,
+        external(context) {
+          let el = document.getElementById('altchart-tooltip');
+          if (!el) {
+            el = document.createElement('div');
+            el.id = 'altchart-tooltip';
+            el.style.cssText = 'position:absolute;pointer-events:none;z-index:200;transition:opacity .1s;';
+            const wrap = document.querySelector('.chart-wrap');
+            wrap.style.position = 'relative';
+            wrap.appendChild(el);
           }
+          const tt = context.tooltip;
+          if (tt.opacity === 0) { el.style.opacity = '0'; return; }
+          const dp = tt.dataPoints?.find(p => p.datasetIndex === 0);
+          if (!dp) { el.style.opacity = '0'; return; }
+
+          const km = parseFloat(dp.label);
+          const ele = dp.raw;
+          const ci = dp.dataIndex;
+
+          // Calcul pente (fenêtre ±10 pts GPX)
+          let idx = 0, best = Infinity;
+          for (let i = 0; i < allDist.length; i++) {
+            const d = Math.abs(allDist[i] - km);
+            if (d < best) { best = d; idx = i; }
+            if (allDist[i] > km + 0.3) break;
+          }
+          const w = 10;
+          const i0 = Math.max(0, idx - w), i1 = Math.min(allDist.length - 1, idx + w);
+          const dElev = allElevFull[i1] - allElevFull[i0];
+          const dDist = (allDist[i1] - allDist[i0]) * 1000;
+          const pct = dDist > 0 ? dElev / dDist * 100 : 0;
+          const sign = pct >= 0 ? '+' : '';
+
+          let sc = '#aaa';
+          if (pct >= 10) sc = '#c0392b';
+          else if (pct >= 7) sc = '#e67e22';
+          else if (pct >= 4) sc = '#27ae60';
+          else if (pct <= -4) sc = '#2980b9';
+
+          const dp_m = Math.round(chartCumDplus[ci] || 0);
+
+          el.innerHTML = `
+            <div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.13);padding:10px 14px;font-family:Arial,sans-serif;min-width:190px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">
+                <span style="font-size:11.5px;font-weight:700;color:#1a2744;">
+                  <span style="color:${sc};font-size:9px;">●</span>&nbsp;${km.toFixed(2)}&nbsp;km
+                </span>
+                <span style="font-size:11.5px;font-weight:700;color:${sc};">${sign}${pct.toFixed(1)}&thinsp;%</span>
+              </div>
+              <div style="border-top:1px solid #f0f0f0;margin-bottom:8px;"></div>
+              <div style="display:flex;gap:0;justify-content:space-around;">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2l3 5H5l3-5z" fill="#1a2744"/><rect x="6" y="9" width="4" height="5" rx="1" fill="#1a2744"/></svg>
+                  <span style="font-size:12px;font-weight:700;color:#1a2744;">${Math.round(ele)}&thinsp;m</span>
+                  <span style="font-size:9.5px;color:#999;letter-spacing:.02em;">Altitude</span>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 11 Q5 5 8 8 Q11 11 14 4" stroke="${sc}" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+                  <span style="font-size:12px;font-weight:700;color:${sc};">${sign}${pct.toFixed(1)}&thinsp;%</span>
+                  <span style="font-size:9.5px;color:#999;letter-spacing:.02em;">Pente</span>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13V3M4 7l4-4 4 4" stroke="#27ae60" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span style="font-size:12px;font-weight:700;color:#1a2744;">+${dp_m}&thinsp;m</span>
+                  <span style="font-size:9.5px;color:#999;letter-spacing:.02em;">D+ cumulé</span>
+                </div>
+              </div>
+            </div>`;
+
+          // Positionnement relatif au chart-wrap
+          const cw = document.querySelector('.chart-wrap');
+          const cwRect = cw.getBoundingClientRect();
+          const canvasRect = context.chart.canvas.getBoundingClientRect();
+          const x = tt.caretX + (canvasRect.left - cwRect.left);
+          const y = tt.caretY + (canvasRect.top  - cwRect.top);
+          const tw = 200;
+          el.style.opacity = '1';
+          el.style.left = (x + 14 + tw > cw.clientWidth ? x - tw - 14 : x + 14) + 'px';
+          el.style.top  = Math.max(0, y - 30) + 'px';
         }
       }
     },
@@ -1124,7 +979,7 @@ Chart.register({
     const yBot = yScale.bottom;
     ctx.save();
     // Zone ombrée (sous le profil vert)
-    ctx.fillStyle = 'rgba(231,76,60,0.15)';
+    ctx.fillStyle = 'rgba(26,39,68,0.12)';
     ctx.fillRect(x1, yTop, x2 - x1, yBot - yTop);
     ctx.restore();
   },
@@ -1140,7 +995,7 @@ Chart.register({
     const yBot = yScale.bottom;
     ctx.save();
     // Lignes verticales par-dessus tout
-    ctx.strokeStyle = '#e74c3c';
+    ctx.strokeStyle = '#1a2744';
     ctx.lineWidth = 1.5;
     ctx.setLineDash([5, 4]);
     ctx.beginPath(); ctx.moveTo(x1, yTop); ctx.lineTo(x1, yBot); ctx.stroke();
@@ -1148,6 +1003,9 @@ Chart.register({
     ctx.restore();
   }
 });
+
+// Activer le mode Côtes par défaut (correspond au tab actif au chargement)
+setTraceMode('climbs');
 
 function highlightOnChart(startKm, endKm, label) {
   climbAnnotation = { startKm, endKm };
@@ -1668,10 +1526,27 @@ function initMobile() {
 
   function setTraceModeM(mode) {
     if (mTraceMode === 'slope') { if (mSlopeLayerGroup) mapM.removeLayer(mSlopeLayerGroup); mainPolylineM.setStyle({ color: '#2980b9', opacity: .9, weight: 3 }); }
-    if (mTraceMode === 'climbs') { hideClimbsOnMapM(); altChartMInst && altChartMInst.update('none'); }
+    if (mTraceMode === 'climbs') { hideClimbsOnMapM(); }
     mTraceMode = mode;
     if (mode === 'slope') { buildSlopeLayersM(); mainPolylineM.setStyle({ opacity:0, weight:0 }); mSlopeLayerGroup.addTo(mapM); }
-    if (mode === 'climbs') { buildClimbAnnotationsM(); showClimbsOnMapM(); altChartMInst && altChartMInst.update('none'); }
+    if (mode === 'climbs') { buildClimbAnnotationsM(); showClimbsOnMapM(); }
+    // Mettre à jour le rendu du graphique mobile
+    if (altChartMInst) {
+      const dsM = altChartMInst.data.datasets[0];
+      if (mode === 'slope') {
+        dsM.segment = {
+          borderColor: ctx => chartSlopeColors[ctx.p0DataIndex] || '#aaa',
+          backgroundColor: ctx => (chartSlopeColors[ctx.p0DataIndex] || '#aaa') + '28'
+        };
+        dsM.borderColor = '#aaa';
+        dsM.backgroundColor = 'transparent';
+      } else {
+        dsM.segment = undefined;
+        dsM.borderColor = '#e8002d';
+        dsM.backgroundColor = 'rgba(232,0,45,0.12)';
+      }
+      altChartMInst.update('none');
+    }
     // Légende pente mobile
     const legendM = document.getElementById('slope-legend-m');
     if (legendM) legendM.style.display = mode === 'slope' ? 'flex' : 'none';
@@ -1714,12 +1589,12 @@ function initMobile() {
       datasets: [
         {
           label: 'Altitude (m)', data: chartEle,
-          fill: true, backgroundColor: 'rgba(39,174,96,0.18)',
-          borderColor: '#27ae60', borderWidth: 1.5, pointRadius: 0, tension: 0.3, order: 2
+          fill: true, backgroundColor: 'rgba(232,0,45,0.12)',
+          borderColor: '#e8002d', borderWidth: 2, pointRadius: 0, tension: 0.3, order: 2
         },
         {
           label: 'Côte', data: [], fill: false,
-          borderColor: '#e74c3c', borderWidth: 2.5, pointRadius: 0, tension: 0.3, order: 1
+          borderColor: '#1a2744', borderWidth: 2.5, pointRadius: 0, tension: 0.3, order: 1
         }
       ]
     },
@@ -1764,7 +1639,7 @@ function initMobile() {
       const x1 = scales.x.getPixelForValue(climbAnnotationM.startKm);
       const x2 = scales.x.getPixelForValue(climbAnnotationM.endKm);
       ctx.save();
-      ctx.fillStyle = 'rgba(231,76,60,0.15)';
+      ctx.fillStyle = 'rgba(26,39,68,0.12)';
       ctx.fillRect(x1, scales.y.top, x2 - x1, scales.y.bottom - scales.y.top);
       ctx.restore();
     },
@@ -1775,7 +1650,7 @@ function initMobile() {
       const x2 = scales.x.getPixelForValue(climbAnnotationM.endKm);
       const yTop = scales.y.top, yBot = scales.y.bottom;
       ctx.save();
-      ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 1.2; ctx.setLineDash([4, 3]);
+      ctx.strokeStyle = '#1a2744'; ctx.lineWidth = 1.2; ctx.setLineDash([4, 3]);
       ctx.beginPath(); ctx.moveTo(x1, yTop); ctx.lineTo(x1, yBot); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x2, yTop); ctx.lineTo(x2, yBot); ctx.stroke();
       ctx.restore();
@@ -1840,11 +1715,11 @@ function initMobile() {
       const x = scales.x.getPixelForValue(window._cursorKmM || 0);
       const yTop = scales.y.top, yBot = scales.y.bottom;
       ctx.save();
-      ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+      ctx.strokeStyle = '#1a2744'; ctx.lineWidth = 1.5; ctx.setLineDash([]);
       ctx.beginPath(); ctx.moveTo(x, yTop); ctx.lineTo(x, yBot); ctx.stroke();
       const ele = allElevFull[idxAtKmM(window._cursorKmM || 0)];
       const y = scales.y.getPixelForValue(ele);
-      ctx.fillStyle = '#e74c3c';
+      ctx.fillStyle = '#1a2744';
       ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI*2); ctx.fill();
       ctx.restore();
     }
@@ -2009,7 +1884,7 @@ window._cursorActiveM = false;
 window._cursorKmM = 0;
 let _cursorMarkerM = null;
 const _cursorIconM = L.divIcon({
-  html: `<div style="background:#e74c3c;border:2.5px solid #fff;border-radius:50%;width:14px;height:14px;box-shadow:0 0 0 3px rgba(231,76,60,.35);"></div>`,
+  html: `<div style="background:#1a2744;border:2.5px solid #fff;border-radius:50%;width:14px;height:14px;box-shadow:0 0 0 3px rgba(26,39,68,.3);"></div>`,
   className: '', iconAnchor: [7, 7]
 });
 
