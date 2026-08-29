@@ -16,6 +16,29 @@
   </head>
 <body>
 
+<script>
+// ── Configuration de la course (branding) ──────────────────────────
+const RACE_CONFIG = {
+  name:       'La Grande Ourthe 100km',
+  gpxFile:    'LGO100km.gpx',
+  color:      '#e8002d',   // couleur principale (tracé, flèches)
+  accentColor:'#1a2744',   // couleur secondaire (navy)
+  distance:   '100,2 km',
+  dplus:      '+3 408 m',
+  dminus:     '−3 408 m',
+  altMin:     '230 m',
+  altMax:     '643 m',
+  altMoy:     '394 m',
+  nbCotes:    44,
+};
+// ── Configuration des ravitaillements ──────────────────────────────
+const RAVITAILLEMENTS = [
+  { km: 26, name: 'Samrée',    lat: 50.22528, lng: 5.66562 },
+  { km: 51, name: 'Achouffe', lat: 50.14999, lng: 5.74557 },
+  { km: 74, name: 'Nisramont (barrage)', lat: 50.14597, lng: 5.66861 },
+];
+</script>
+
 <header>
   <h1>🏔 La Grande Ourthe 100km</h1>
   <span>Analyse des côtes ≥ 300 m — Source : LGO100km.gpx</span>
@@ -72,6 +95,7 @@
         <span>🗺 Tracé du parcours <span class="selection-info" id="map-info"></span></span>
         <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
           <button id="btn-3d" onclick="toggle3D()" class="btn-3d-toggle" title="Vue 3D terrain">3D</button>
+          <button onclick="downloadGPX()" style="padding:3px 10px;font-size:11px;font-weight:600;background:#fff;border:1px solid #bbb;border-radius:12px;cursor:pointer;color:#444;white-space:nowrap;" title="Télécharger le tracé GPX">⬇ GPX</button>
           <button id="share-btn" onclick="shareClimb()" style="display:none;padding:3px 10px;font-size:11px;font-weight:600;background:#fff;border:1px solid #bbb;border-radius:12px;cursor:pointer;color:#444;white-space:nowrap;" title="Copier le lien vers cette côte">🔗 Partager</button>
         </div>
       </div>
@@ -94,10 +118,12 @@
       <div class="profile-tabs">
         <button class="profile-tab active" onclick="switchProfileTab('climbs', this)">Côtes</button>
         <button class="profile-tab" onclick="switchProfileTab('slope', this)">Pente</button>
+        <button class="profile-tab" onclick="switchProfileTab('ravitaillements', this)">Ravitaillements</button>
       </div>
       <div class="chart-wrap">
         <canvas id="altChart"></canvas>
       </div>
+      <div id="rv-bar" style="display:none"></div>
     </div>
   </div>
 </div>
@@ -389,12 +415,29 @@ function setTraceMode(mode) {
       };
       ds.borderColor = '#aaa';
       ds.backgroundColor = 'transparent';
+    } else if (mode === 'ravitaillements') {
+      ds.segment = undefined;
+      ds.borderColor = '#f39c12';
+      ds.backgroundColor = 'rgba(243,156,18,0.15)';
     } else {
       ds.segment = undefined;
       ds.borderColor = '#e8002d';
       ds.backgroundColor = 'rgba(232,0,45,0.12)';
     }
     altChart.update('none');
+  }
+  // Barre ravitaillements
+  // Barre ravitaillements + masquage des ticks X
+  const rvBar = document.getElementById('rv-bar');
+  const isRv = mode === 'ravitaillements';
+  if (altChart) {
+    altChart.options.scales.x.display = !isRv;
+    altChart.update('none');
+  }
+  document.querySelector('.chart-wrap').classList.toggle('rv-mode', isRv);
+  if (rvBar) {
+    if (isRv) { buildRvBar(); rvBar.style.display = 'block'; }
+    else rvBar.style.display = 'none';
   }
 
   // Mettre à jour les 3 boutons radio
@@ -667,6 +710,64 @@ function _add3DTerrainAndTrace(exag) {
       'text-halo-width': 1.5
     }
   });
+  // Ravitaillements sur la carte 3D
+  const rvGeoJSON = {
+    type: 'FeatureCollection',
+    features: RAVITAILLEMENTS.map(rv => ({
+      type: 'Feature',
+      properties: { name: rv.name, km: rv.km },
+      geometry: { type: 'Point', coordinates: [rv.lng, rv.lat] }
+    }))
+  };
+  map3dInst.addSource('ravitaillements', { type: 'geojson', data: rvGeoJSON });
+  map3dInst.addLayer({
+    id: 'rv-circles', type: 'circle', source: 'ravitaillements',
+    paint: {
+      'circle-radius': 8,
+      'circle-color': '#f39c12',
+      'circle-stroke-color': '#fff',
+      'circle-stroke-width': 2
+    }
+  });
+  map3dInst.addLayer({
+    id: 'rv-icons', type: 'symbol', source: 'ravitaillements',
+    layout: {
+      'text-field': '🍌',
+      'text-size': 14,
+      'text-allow-overlap': true,
+      'text-ignore-placement': true,
+      'text-anchor': 'center'
+    },
+    paint: { 'text-color': '#fff' }
+  });
+  map3dInst.addLayer({
+    id: 'rv-labels', type: 'symbol', source: 'ravitaillements',
+    layout: {
+      'text-field': ['concat', ['get', 'name'], '\n', ['to-string', ['get', 'km']], ' km'],
+      'text-font': ['Noto Sans Bold'],
+      'text-size': 11,
+      'text-offset': [0, 1.4],
+      'text-anchor': 'top',
+      'text-allow-overlap': false
+    },
+    paint: {
+      'text-color': '#7d4e00',
+      'text-halo-color': 'rgba(255,255,255,0.95)',
+      'text-halo-width': 1.5
+    }
+  });
+
+  // Popup au clic sur un ravitaillement
+  map3dInst.on('click', 'rv-circles', e => {
+    const { name, km } = e.features[0].properties;
+    const coords = e.features[0].geometry.coordinates;
+    new maplibregl.Popup({ offset: 12, className: 'rv-popup-3d' })
+      .setLngLat(coords)
+      .setHTML(`<b>🍌 Ravitaillement</b><br>${name} — km ${km}`)
+      .addTo(map3dInst);
+  });
+  map3dInst.on('mouseenter', 'rv-circles', () => map3dInst.getCanvas().style.cursor = 'pointer');
+  map3dInst.on('mouseleave', 'rv-circles', () => map3dInst.getCanvas().style.cursor = '');
 }
 
 function setMap3DStyle(key) {
@@ -843,6 +944,19 @@ const mkStart = L.divIcon({ html:'<div style="background:#27ae60;color:#fff;bord
 const mkEnd   = L.divIcon({ html:'<div style="background:#c0392b;color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 5px rgba(0,0,0,.4)">■</div>', className:'', iconAnchor:[13,13] });
 L.marker(allPoints[0],  {icon: mkStart}).addTo(map).bindPopup('<b>Départ</b>');
 L.marker(allPoints[allPoints.length-1], {icon: mkEnd}).addTo(map).bindPopup('<b>Arrivée</b>');
+
+// Ravitaillements sur la carte Leaflet
+RAVITAILLEMENTS.forEach(rv => {
+  const icon = L.divIcon({
+    className: '',
+    html: `<div class="rv-marker"><span class="rv-icon">🍌</span></div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14]
+  });
+  L.marker([rv.lat, rv.lng], { icon })
+    .addTo(map)
+    .bindPopup(`<b>🍌 Ravitaillement</b><br>${rv.name} — km ${rv.km}`);
+});
 
 // Couche de surbrillance côte (réutilisée)
 let highlightLayer  = null;
@@ -1248,6 +1362,104 @@ Chart.register({
   }
 });
 
+// Plugin : lignes verticales + points aux ravitaillements
+Chart.register({
+  id: 'rvLines',
+  afterDatasetsDraw(chart) {
+    if (!chart.canvas || chart.canvas.id !== 'altChart' || traceMode !== 'ravitaillements') return;
+    const { ctx, scales } = chart;
+    const totalKm = chartKm[chartKm.length - 1];
+    const waypoints = [
+      { km: 0, name: 'Départ' },
+      ...RAVITAILLEMENTS.map(rv => ({ km: rv.km, name: rv.name })),
+      { km: totalKm, name: 'Arrivée' }
+    ];
+    waypoints.forEach((wp, i) => {
+      const x = scales.x.getPixelForValue(wp.km);
+      const top = scales.y.top, bottom = scales.y.bottom;
+      // Ligne verticale pointillée
+      ctx.save();
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = i === 0 || i === waypoints.length - 1 ? 'rgba(120,120,120,0.4)' : 'rgba(220,80,80,0.6)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke();
+      ctx.restore();
+      // Point sur le profil
+      const ci = chartKm.reduce((b, km, j) => Math.abs(km - wp.km) < Math.abs(chartKm[b] - wp.km) ? j : b, 0);
+      const y = scales.y.getPixelForValue(chartEle[ci]);
+      ctx.save();
+      const isStart = i === 0, isEnd = i === waypoints.length - 1;
+      const markerColor = isStart ? '#27ae60' : isEnd ? '#c0392b' : '#f39c12';
+      if (isStart) {
+        // Cercle vert pour le départ
+        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = markerColor; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+        ctx.fill(); ctx.stroke();
+      } else if (isEnd) {
+        // Croix pour l'arrivée
+        ctx.strokeStyle = markerColor; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(x-5, y-5); ctx.lineTo(x+5, y+5); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x+5, y-5); ctx.lineTo(x-5, y+5); ctx.stroke();
+      } else {
+        // Carré orange pour les ravitaillements
+        ctx.fillStyle = markerColor; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+        ctx.fillRect(x - 6, y - 6, 12, 12);
+        ctx.strokeRect(x - 6, y - 6, 12, 12);
+      }
+      ctx.restore();
+    });
+  }
+});
+
+function buildRvBar() {
+  const totalKm = chartKm[chartKm.length - 1];
+  const waypoints = [
+    { km: 0, name: 'Départ' },
+    ...RAVITAILLEMENTS.map(rv => ({ km: rv.km, name: rv.name })),
+    { km: totalKm, name: 'Arrivée' }
+  ];
+  waypoints.forEach(wp => {
+    const ci = chartKm.reduce((b, km, j) => Math.abs(km - wp.km) < Math.abs(chartKm[b] - wp.km) ? j : b, 0);
+    wp.dplus = Math.round(chartCumDplus[ci]);
+  });
+
+  // Aligner sur la zone de tracé réelle du chart (chartArea)
+  const ca = altChart.chartArea;
+  const canvasW = altChart.canvas.offsetWidth;
+  const plotLeft  = (ca.left  / canvasW * 100).toFixed(2);
+  const plotWidth = ((ca.right - ca.left) / canvasW * 100).toFixed(2);
+
+  const pct = km => parseFloat(plotLeft) + (km / totalKm) * parseFloat(plotWidth);
+
+  let html = `<div class="rv-bar-inner">`;
+  // Segments entre waypoints (en dessous)
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const a = waypoints[i], b = waypoints[i + 1];
+    const left  = pct(a.km).toFixed(2);
+    const width = (pct(b.km) - pct(a.km)).toFixed(2);
+    const dist  = (b.km - a.km).toFixed(1);
+    const dp    = b.dplus - a.dplus;
+    html += `<div class="rv-bar-seg" style="left:${left}%;width:${width}%">
+      <span class="rv-seg-dist">${dist} km</span><span class="rv-seg-dp">+${dp} m</span>
+    </div>`;
+  }
+  // Marqueurs positionnés sur la zone de tracé
+  waypoints.forEach((wp, i) => {
+    const left = pct(wp.km).toFixed(2);
+    const isStart = i === 0, isEnd = i === waypoints.length - 1;
+    const kmLabel = `${Math.round(wp.km * 10) / 10} KM`;
+    const dotColor = isStart ? '#27ae60' : isEnd ? '#c0392b' : '#f39c12';
+    const kmColor  = isStart ? '#27ae60' : isEnd ? '#c0392b' : '#f39c12';
+    html += `<div class="rv-bar-wp" style="left:${left}%">
+      <div class="rv-bar-dot" style="background:${dotColor}"></div>
+      <div class="rv-bar-km" style="color:${kmColor}">${kmLabel}</div>
+      <div class="rv-bar-name">• ${wp.name}</div>
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('rv-bar').innerHTML = html;
+}
+
 // Activer le mode Côtes par défaut (correspond au tab actif au chargement)
 setTraceMode('climbs');
 
@@ -1356,6 +1568,24 @@ function toggleM3DPanel(headerEl) {
   const toggle = headerEl.querySelector('.m3d-panel-toggle');
   body.classList.toggle('collapsed');
   toggle.classList.toggle('collapsed');
+}
+
+function downloadGPX() {
+  const pts = allPoints.map((p, i) => `    <trkpt lat="${p[0].toFixed(6)}" lon="${p[1].toFixed(6)}"><ele>${(allElevFull[i] || 0).toFixed(1)}</ele></trkpt>`).join('\n');
+  const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="trace-view" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>La Grande Ourthe 100km</name>
+    <trkseg>
+${pts}
+    </trkseg>
+  </trk>
+</gpx>`;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([gpx], { type: 'application/gpx+xml' }));
+  a.download = 'LGO100km.gpx';
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 function resetFilters() {
@@ -1617,6 +1847,7 @@ document.querySelectorAll('#climbs-body tr').forEach(row => {
 <div class="mobile-tab-content active" id="tab-carte">
   <div class="card-title-m">
     <span>🗺 Tracé du parcours <span class="sel-info" id="map-info-m"></span></span>
+    <button onclick="downloadGPX()" style="padding:2px 9px;font-size:10px;font-weight:600;background:#fff;border:1px solid #bbb;border-radius:12px;cursor:pointer;color:#444;white-space:nowrap;flex-shrink:0;" title="Télécharger le tracé GPX">⬇ GPX</button>
     <button id="share-btn-m" onclick="shareClimbM()" style="display:none;padding:2px 9px;font-size:10px;font-weight:600;background:#fff;border:1px solid #bbb;border-radius:12px;cursor:pointer;color:#444;white-space:nowrap;flex-shrink:0;">🔗 Partager</button>
   </div>
   <div style="position:relative;flex:1;min-height:0;">
@@ -1881,6 +2112,19 @@ function initMobile() {
   const mkE2 = L.divIcon({ html:'<div style="background:#c0392b;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 2px 5px rgba(0,0,0,.4)">■</div>', className:'', iconAnchor:[11,11] });
   L.marker(allPoints[0], {icon: mkS2}).addTo(mapM).bindPopup('<b>Départ</b>');
   L.marker(allPoints[allPoints.length-1], {icon: mkE2}).addTo(mapM).bindPopup('<b>Arrivée</b>');
+
+  // Ravitaillements mobile
+  RAVITAILLEMENTS.forEach(rv => {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div class="rv-marker"><span class="rv-icon">🍌</span></div>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
+    });
+    L.marker([rv.lat, rv.lng], { icon })
+      .addTo(mapM)
+      .bindPopup(`<b>🍌 Ravitaillement</b><br>${rv.name} — km ${rv.km}`);
+  });
 
   // Profil
   const ctxM = document.getElementById('altChartM').getContext('2d');
@@ -2242,6 +2486,15 @@ window.addEventListener('resize', () => {
   </div>
   <canvas id="mp-canvas" height="60"></canvas>
 </div>
+
+<script>
+// Mode embed (iframe)
+if (new URLSearchParams(window.location.search).get('embed') === '1') {
+  document.querySelector('header').style.display = 'none';
+  document.querySelector('.stats-bar').style.display = 'none';
+  document.body.classList.add('embed-mode');
+}
+</script>
 
 </body>
 </html>
