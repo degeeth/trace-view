@@ -254,6 +254,7 @@ Classes : `.m3d-style-panel`, `.m3d-styles-grid`, `.m3d-style-thumb`, `.m3d-thum
 | `TOPO_STYLE` | `object` | Style MapLibre inline pour OpenTopoMap (courbes de niveau) |
 | `map3dCoords` | `[lng,lat,ele][]` | Coordonnées GeoJSON du tracé GPX |
 | `map3dCurrentStyle` | `string` | Style MapLibre actif |
+| `map3dArrows` | `FeatureCollection` | Points GeoJSON avec `bearing` et `tier` pour les flèches directionnelles 3D |
 
 ---
 
@@ -295,4 +296,67 @@ gdal_contour -a ele -i 100 dem.tif contours.geojson
 - Fichier estimé pour la zone La Grande Ourthe (~60×60 km) : **2–5 MB** à 100 m d'intervalle
 - Intégration : source GeoJSON statique dans MapLibre, deux couches (courbes secondaires 100 m / courbes maîtresses 500 m)
 - Avantage : aucune dépendance externe, fonctionne sur tous les styles 3D
-- **Non encore implémenté** — nécessite téléchargement du DEM et traitement GDAL
+- **Implémenté** — voir `gen_contours.py` et les fichiers `contours_thin.geojson` / `contours_thick.geojson`
+
+---
+
+## 9. Flèches directionnelles — carte 2D (Leaflet)
+
+**Fichiers modifiés** : `index.html`
+
+- Flèches SVG rotatives tous les 2 km sur la carte Leaflet (desktop et mobile)
+- Bearing calculé via atan2/haversine entre deux points GPX consécutifs
+- Icône `L.divIcon` avec SVG `<path d="M5,0 L10,10 L5,6.5 L0,10 Z">` (forme de flèche pleine)
+- Couleur bleue `#2980b9`, contour blanc, taille 14 px (desktop) / 12 px (mobile)
+- Non interactif (`interactive: false`)
+
+---
+
+## 10. Flèches directionnelles — carte 3D (MapLibre) avec densité adaptative au zoom
+
+**Fichiers modifiés** : `index.html`
+
+- Flèches `▲` tous les 1 km sur la carte MapLibre 3D
+- Bearing calculé identiquement (atan2/haversine) et stocké en propriété GeoJSON
+- `text-rotation-alignment: 'map'` + `text-pitch-alignment: 'map'` → flèches ancrées au terrain, pas à l'écran
+- Couleur rouge `#e8002d` (cohérente avec le tracé), halo blanc 2.5 px
+
+### Densité adaptative au zoom
+
+Chaque flèche porte une propriété `tier` :
+
+| Tier | Espacement | Condition |
+|---|---|---|
+| 1 | 10 km | km % 10 == 0 |
+| 2 | 5 km | km % 5 == 0 |
+| 3 | 2 km | km % 2 == 0 |
+| 4 | 1 km | tous les km |
+
+Filtre MapLibre avec expression `step` sur le zoom :
+
+```js
+filter: ['<=', ['get', 'tier'], ['step', ['zoom'], 1, 10, 2, 11.5, 3, 13, 4]]
+```
+
+| Zoom | Flèches affichées |
+|---|---|
+| < 10 | 1 flèche / 10 km |
+| 10 – 11.5 | 1 flèche / 5 km |
+| 11.5 – 13 | 1 flèche / 2 km |
+| ≥ 13 | 1 flèche / 1 km |
+
+Aucun recalcul JS au zoom — le filtrage est entièrement géré par le moteur MapLibre GL.
+
+---
+
+## 11. Courbes de niveau — contrôle par zoom minimum
+
+**Fichiers modifiés** : `index.html`
+
+Ajout de `minzoom` sur les couches de courbes de niveau pour éviter l'encombrement visuel à faible zoom :
+
+| Couche | `minzoom` | Opacité |
+|---|---|---|
+| `contours-thin-layer` (10 m) | 13 | fade-in entre 13 et 14.5 |
+| `contours-thick-layer` (50 m) | 11 | fade-in entre 11 et 13 |
+| `contours-labels` | 14 | fade-in entre 14 et 15 |
