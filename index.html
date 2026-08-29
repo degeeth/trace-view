@@ -413,6 +413,7 @@ function disableSlopeMode() { setTraceMode('none');  }
 let map3dInst = null;
 let is3D = false;
 let map3dCoords = null;
+let map3dArrows = null;
 let map3dCurrentStyle = 'liberty';
 
 // Style inline pour OpenTopoMap (courbes de niveau natives)
@@ -486,29 +487,32 @@ function _add3DTerrainAndTrace(exag) {
     map3dInst.addSource('contours-thick', { type: 'geojson', data: 'contours_thick.geojson' });
     map3dInst.addLayer({
       id: 'contours-thin-layer', type: 'line', source: 'contours-thin',
+      minzoom: 13,
       paint: {
         'line-color': '#9b8057',
         'line-width': 0.5,
-        'line-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0, 13.5, 0.4]
+        'line-opacity': ['interpolate', ['linear'], ['zoom'], 13, 0, 14.5, 0.4]
       },
       layout: { 'line-cap': 'round' }
     });
     map3dInst.addLayer({
       id: 'contours-thick-layer', type: 'line', source: 'contours-thick',
+      minzoom: 11,
       paint: {
         'line-color': '#7a5c1e',
         'line-width': ['interpolate', ['linear'], ['zoom'], 11, 0.8, 14, 1.2],
-        'line-opacity': ['interpolate', ['linear'], ['zoom'], 10, 0.25, 13, 0.6]
+        'line-opacity': ['interpolate', ['linear'], ['zoom'], 11, 0, 13, 0.6]
       },
       layout: { 'line-cap': 'round' }
     });
     map3dInst.addLayer({
       id: 'contours-labels', type: 'symbol', source: 'contours-thick',
+      minzoom: 14,
       layout: {
         'symbol-placement': 'line',
         'text-field': ['concat', ['to-string', ['get', 'ele']], ' m'],
         'text-font': ['Noto Sans Regular'],
-        'text-size': ['interpolate', ['linear'], ['zoom'], 13, 0, 14, 10],
+        'text-size': ['interpolate', ['linear'], ['zoom'], 14, 0, 15, 10],
         'symbol-spacing': 400,
         'text-offset': [0, 0.2]
       },
@@ -533,6 +537,28 @@ function _add3DTerrainAndTrace(exag) {
     paint: { 'line-color': '#e8002d', 'line-width': 3.5, 'line-opacity': 0.95 },
     layout: { 'line-cap': 'round', 'line-join': 'round' }
   });
+  // Flèches directionnelles 1 km
+  map3dInst.addSource('arrows', { type: 'geojson', data: map3dArrows });
+  map3dInst.addLayer({
+    id: 'trace-arrows', type: 'symbol', source: 'arrows',
+    // tier 1 (10 km) dès zoom 8 ; tier 2 (5 km) dès 10 ; tier 3 (2 km) dès 11.5 ; tier 4 (1 km) dès 13
+    filter: ['<=', ['get', 'tier'], ['step', ['zoom'], 1, 10, 2, 11.5, 3, 13, 4]],
+    layout: {
+      'text-field': '▲',
+      'text-font': ['Noto Sans Bold'],
+      'text-size': 14,
+      'text-rotate': ['get', 'bearing'],
+      'text-rotation-alignment': 'map',
+      'text-pitch-alignment': 'map',
+      'text-allow-overlap': true,
+      'text-ignore-placement': true
+    },
+    paint: {
+      'text-color': '#e8002d',
+      'text-halo-color': 'rgba(255,255,255,0.9)',
+      'text-halo-width': 2.5
+    }
+  });
 }
 
 function setMap3DStyle(key) {
@@ -549,6 +575,33 @@ function init3DMap() {
   if (map3dInst) { map3dInst.resize(); return; }
 
   map3dCoords = allPoints.map((p, i) => [p[1], p[0], allElevFull[i] || 0]);
+
+  // Flèches directionnelles tous les 1 km
+  map3dArrows = (() => {
+    const features = [];
+    const SPACING = 1.0;
+    let next = SPACING;
+    for (let i = 1; i < allPoints.length; i++) {
+      if (allDist[i] < next) continue;
+      const [la1, ln1] = allPoints[i - 1], [la2, ln2] = allPoints[i];
+      const dLng = (ln2 - ln1) * Math.PI / 180;
+      const φ1 = la1 * Math.PI / 180, φ2 = la2 * Math.PI / 180;
+      const bearing = Math.atan2(
+        Math.sin(dLng) * Math.cos(φ2),
+        Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(dLng)
+      ) * 180 / Math.PI;
+      const km = Math.round(next);
+      // tier : 1 = tous les 10 km, 2 = 5 km, 3 = 2 km, 4 = 1 km
+      const tier = km % 10 === 0 ? 1 : km % 5 === 0 ? 2 : km % 2 === 0 ? 3 : 4;
+      features.push({
+        type: 'Feature',
+        properties: { bearing, km, tier },
+        geometry: { type: 'Point', coordinates: [ln2, la2] }
+      });
+      next += SPACING;
+    }
+    return { type: 'FeatureCollection', features };
+  })();
   const lngs = allPoints.map(p => p[1]);
   const lats  = allPoints.map(p => p[0]);
   const bbox  = [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]];
@@ -632,6 +685,31 @@ new traceControl().addTo(map);
 // Tracé principal (grisé quand une côte est sélectionnée)
 const mainPolyline = L.polyline(allPoints, { color: '#2980b9', weight: 3.5, opacity: .9 }).addTo(map);
 map.fitBounds(mainPolyline.getBounds(), { padding: [20, 20] });
+
+// Flèches directionnelles (une tous les ~2 km)
+(function addArrows(targetMap, size) {
+  const SPACING = 2.0; // km
+  let next = SPACING;
+  for (let i = 1; i < allPoints.length; i++) {
+    if (allDist[i] < next) continue;
+    const [la1, ln1] = allPoints[i - 1], [la2, ln2] = allPoints[i];
+    const dLng = (ln2 - ln1) * Math.PI / 180;
+    const φ1 = la1 * Math.PI / 180, φ2 = la2 * Math.PI / 180;
+    const deg = Math.atan2(Math.sin(dLng) * Math.cos(φ2),
+      Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(dLng)) * 180 / Math.PI;
+    L.marker([la2, ln2], {
+      icon: L.divIcon({
+        className: '',
+        html: `<svg width="${size}" height="${size}" viewBox="0 0 10 12" style="transform:rotate(${deg}deg);display:block">
+          <path d="M5,0 L10,10 L5,6.5 L0,10 Z" fill="#2980b9" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/>
+        </svg>`,
+        iconSize: [size, size], iconAnchor: [size / 2, size / 2]
+      }),
+      interactive: false, keyboard: false
+    }).addTo(targetMap);
+    next += SPACING;
+  }
+})(map, 14);
 
 // Marqueurs départ / arrivée
 const mkStart = L.divIcon({ html:'<div style="background:#27ae60;color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 5px rgba(0,0,0,.4)">▶</div>', className:'', iconAnchor:[13,13] });
@@ -1613,6 +1691,28 @@ function initMobile() {
 
   mainPolylineM = L.polyline(allPoints, { color: '#2980b9', weight: 3, opacity: .9 }).addTo(mapM);
   mapM.fitBounds(mainPolylineM.getBounds(), { padding: [30, 30] });
+  (function addArrows(targetMap, size) {
+    const SPACING = 2.0; let next = SPACING;
+    for (let i = 1; i < allPoints.length; i++) {
+      if (allDist[i] < next) continue;
+      const [la1, ln1] = allPoints[i - 1], [la2, ln2] = allPoints[i];
+      const dLng = (ln2 - ln1) * Math.PI / 180;
+      const φ1 = la1 * Math.PI / 180, φ2 = la2 * Math.PI / 180;
+      const deg = Math.atan2(Math.sin(dLng) * Math.cos(φ2),
+        Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(dLng)) * 180 / Math.PI;
+      L.marker([la2, ln2], {
+        icon: L.divIcon({
+          className: '',
+          html: `<svg width="${size}" height="${size}" viewBox="0 0 10 12" style="transform:rotate(${deg}deg);display:block">
+            <path d="M5,0 L10,10 L5,6.5 L0,10 Z" fill="#2980b9" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/>
+          </svg>`,
+          iconSize: [size, size], iconAnchor: [size / 2, size / 2]
+        }),
+        interactive: false, keyboard: false
+      }).addTo(targetMap);
+      next += SPACING;
+    }
+  })(mapM, 12);
 
   const mkS2 = L.divIcon({ html:'<div style="background:#27ae60;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 2px 5px rgba(0,0,0,.4)">▶</div>', className:'', iconAnchor:[11,11] });
   const mkE2 = L.divIcon({ html:'<div style="background:#c0392b;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 2px 5px rgba(0,0,0,.4)">■</div>', className:'', iconAnchor:[11,11] });
