@@ -254,3 +254,45 @@ Classes : `.m3d-style-panel`, `.m3d-styles-grid`, `.m3d-style-thumb`, `.m3d-thum
 | `TOPO_STYLE` | `object` | Style MapLibre inline pour OpenTopoMap (courbes de niveau) |
 | `map3dCoords` | `[lng,lat,ele][]` | Coordonnées GeoJSON du tracé GPX |
 | `map3dCurrentStyle` | `string` | Style MapLibre actif |
+
+---
+
+## Analyse : reproduire le style terrain UTMB
+
+### Ce qu'UTMB utilise
+- **Mapbox GL JS** → remplacé par MapLibre GL JS (identique, open source)
+- **Mapbox Terrain-v2** → tuiles vectorielles propriétaires avec courbes de niveau + étiquettes d'altitude (nécessite clé Mapbox payante)
+- **Mapbox Outdoors/Terrain style** → fond de carte avec teintes hypsométriques
+- **Mapzen terrain tiles** (AWS terrarium) → déjà intégré dans ce projet (`s3.amazonaws.com/elevation-tiles-prod/terrarium/`)
+
+### Attribution img_3 : `© OpenStreetMap · Natural Earth · Mapzen`
+Nos sources correspondent exactement :
+- OpenStreetMap → via OpenFreeMap / CartoDB
+- Natural Earth → inclus dans le style liberty (`ne2_shaded`)
+- Mapzen → tuiles DEM terrarium AWS déjà utilisées
+
+### Comparatif des alternatives libres pour les courbes de niveau
+
+| Source | Courbes | Vecteur | Sans clé API |
+|---|---|---|---|
+| OpenTopoMap | ✓ | ✗ raster | ✓ |
+| OpenFreeMap | ✗ | ✓ | ✓ |
+| Protomaps | ✗ | ✓ | ✓ |
+| Stamen Terrain | ✓ | ✗ | ✗ (clé Stadia) |
+| Maptiler Outdoor-v2 | ✓ | ✓ | ✗ (clé gratuite) |
+| SRTM/Copernicus + GDAL | ✓ | ✓ GeoJSON statique | ✓ |
+
+### Voie recommandée : GeoJSON statique depuis DEM libre
+
+La seule option **100 % open source + sans clé + courbes vectorielles** est de pré-générer les courbes depuis les données DEM publiques (SRTM NASA ou Copernicus ESA, résolution 30 m) :
+
+```bash
+# Télécharger le DEM Copernicus pour la zone GPX
+# Puis générer les courbes avec GDAL
+gdal_contour -a ele -i 100 dem.tif contours.geojson
+```
+
+- Fichier estimé pour la zone La Grande Ourthe (~60×60 km) : **2–5 MB** à 100 m d'intervalle
+- Intégration : source GeoJSON statique dans MapLibre, deux couches (courbes secondaires 100 m / courbes maîtresses 500 m)
+- Avantage : aucune dépendance externe, fonctionne sur tous les styles 3D
+- **Non encore implémenté** — nécessite téléchargement du DEM et traitement GDAL
