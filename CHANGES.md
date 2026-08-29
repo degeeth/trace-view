@@ -255,6 +255,11 @@ Classes : `.m3d-style-panel`, `.m3d-styles-grid`, `.m3d-style-thumb`, `.m3d-thum
 | `map3dCoords` | `[lng,lat,ele][]` | Coordonnées GeoJSON du tracé GPX |
 | `map3dCurrentStyle` | `string` | Style MapLibre actif |
 | `map3dArrows` | `FeatureCollection` | Points GeoJSON avec `bearing` et `tier` pour les flèches directionnelles 3D |
+| `contourThinCache` | `object\|null` | Cache mémoire du GeoJSON contours_thin (évite re-téléchargement) |
+| `contourThickCache` | `object\|null` | Cache mémoire du GeoJSON contours_thick |
+| `SAT_STYLE` | `object` | Style MapLibre inline pour Esri World Imagery (satellite) |
+| `toggleClimbsPanel()` | fonction | Masque/affiche la colonne tableau des côtes avec animation |
+| `toggleM3DPanel(el)` | fonction | Replie/déplie le panneau "Fond de carte" 3D |
 
 ---
 
@@ -360,3 +365,93 @@ Ajout de `minzoom` sur les couches de courbes de niveau pour éviter l'encombrem
 | `contours-thin-layer` (10 m) | 13 | fade-in entre 13 et 14.5 |
 | `contours-thick-layer` (50 m) | 11 | fade-in entre 11 et 13 |
 | `contours-labels` | 14 | fade-in entre 14 et 15 |
+
+---
+
+## 12. Style Satellite 3D (Esri World Imagery)
+
+**Fichiers modifiés** : `index.html`, `style.css`
+
+- 6e style ajouté dans `MAP3D_STYLES` : `satellite` via `SAT_STYLE` (objet MapLibre inline)
+- Source : Esri World Imagery (`server.arcgisonline.com`) — même tuiles que la carte Leaflet 2D, sans API key, maxzoom 19
+- `glyphs` ajoutés aux styles inline (SAT_STYLE, TOPO_STYLE) → polices Noto Sans disponibles pour les flèches et labels
+- Exagération terrain : 1.5 (intermédiaire entre Terrain et Streets)
+- Halo du tracé GPX renforcé en mode satellite : width 9 px / opacity 0.4 / blur 5 (vs 5/0.15/3)
+- Thumbnail dans le panneau : vraie tuile Esri via `background-image`
+- Grille du panneau de styles passe de 2×2 à 3 colonnes pour accueillir 5 styles + Topo
+
+---
+
+## 13. Amélioration qualité terrain 3D
+
+**Fichiers modifiés** : `index.html`
+
+- `tileSize: 512` sur la source DEM → 4× plus de points d'élévation, maillage terrain nettement plus lisse
+- `optimizeForTerrain: true` sur la carte MapLibre → priorité rendu terrain
+- `maxPitch: 80°` → inclinaison quasi-FPS possible dans les vallées
+- Pitch initial 35° → 45° à l'ouverture
+- Couche `sky` type `atmosphere` (API MapLibre 4 correcte, wrappée en try/catch)
+- `setFog` avec brume atmosphérique subtile pour profondeur de champ
+- `hillshade-illumination-anchor: 'map'` → éclairage cohérent lors de la rotation
+- Hillshade-exaggeration 0.4 → 0.5
+- Épaisseur tracé GPX adaptive : `['interpolate', zoom, 8→2px, 12→3.5px, 16→5px]`
+
+---
+
+## 14. Cours d'eau renforcés — style Terrain 3D
+
+**Fichiers modifiés** : `index.html`
+
+- Couches ajoutées uniquement sur le style `liberty` (Terrain), source `openmaptiles`
+- `water-enhanced` (fill) : surfaces d'eau en `#4a9fc7`, opacité 0.75
+- `waterway-river` (line) : rivières en `#4a9fc7`, épaisseur 1.5→3.5→6 px selon zoom
+- `waterway-stream` (line) : ruisseaux/canaux en `#5aafe0`, épaisseur 0.6→2 px selon zoom
+
+---
+
+## 15. Labels km sur flèches 3D + cache contours
+
+**Fichiers modifiés** : `index.html`
+
+- Couche `trace-arrows-km` : labels "10 km", "20 km"... sur les flèches tier 1 & 2 uniquement
+- Contours GeoJSON pré-chargés en mémoire au premier `init3DMap()` via `Promise.all` → plus de re-téléchargement de 6 MB lors des changements de style
+
+---
+
+## 16. Panneau "Fond de carte" 3D — toggle collapse
+
+**Fichiers modifiés** : `index.html`, `style.css`
+
+- Header du panneau cliquable avec chevron animé
+- Clic → `max-height` collapse animé en 0.25s
+- Seul le titre reste visible à l'état réduit
+
+---
+
+## 17. Tableau des côtes — masquer / afficher
+
+**Fichiers modifiés** : `index.html`, `style.css`
+
+- Header "📋 Tableau des côtes" rendu cliquable avec chevron
+- Clic → colonne gauche passe à `width: 0` en 0.3s, colonne droite (carte + profil) prend toute la largeur
+- Bouton 📋 flottant (`position: fixed`) apparaît sur le bord gauche de l'écran pour ré-ouvrir le tableau
+- `map.invalidateSize()` et `map3dInst.resize()` appelés après la transition pour éviter les artefacts Leaflet/MapLibre
+- Contrôles MapLibre agrandis (40×40 px) sur mobile via `@media (max-width: 768px)`
+
+---
+
+## 18. Flèches 3D — disparition dézoomé + densité affinée
+
+**Fichiers modifiés** : `index.html`
+
+- Zoom < 8 : aucune flèche affichée (tier seuil → 0)
+- Labels km visibles uniquement si zoom ≥ 8 (filtre `['>=', ['zoom'], 8]`)
+- Tableau récapitulatif mis à jour :
+
+| Zoom | Flèches |
+|---|---|
+| < 8 | aucune |
+| 8 – 10 | 1 / 10 km |
+| 10 – 11.5 | 1 / 5 km |
+| 11.5 – 13 | 1 / 2 km |
+| ≥ 13 | 1 / 1 km |
