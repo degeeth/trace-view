@@ -1,0 +1,23 @@
+{
+  "name": "Ohm Trail (Aywaille)",
+  "traceColor": "#32373C",
+  "accentColor": "#E84E0F",
+  "aidStationIcon": {
+    "name": "Oméga du logo Ohm Trail",
+    "viewBox": "80 54 352 320",
+    "path": "M84 370V318H148A145 155 0 1 1 362 318H427V370H279V305H298A90 105 0 1 0 212 305H231V370Z"
+  },
+  "headerLogo": true,
+  "theme": {
+    "primary": "#E84E0F",
+    "onPrimary": "#FFFFFF",
+    "ink": "#313131",
+    "night": "#313131",
+    "nightHover": "#454545",
+    "radius": "4px",
+    "font": "'Open Sans', Arial, sans-serif",
+    "fontDisplay": "Montserrat, 'Open Sans', sans-serif",
+    "googleFonts": "family=Montserrat:wght@600;700&family=Open+Sans:wght@400;600;700",
+    "aidIconColor": "#E84E0F"
+  }
+}

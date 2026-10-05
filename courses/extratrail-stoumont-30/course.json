@@ -1,0 +1,15 @@
+{
+  "id": "extratrail-stoumont-30",
+  "name": "Extratrail Stoumont 30 km (noir)",
+  "subtitle": "Analyse des côtes ≥ 300 m",
+  "gpx": "extratrail-stoumont-30km-noir.gpx",
+  "branding": "extratrail",
+  "terrainExaggeration": 2.5,
+  "fillElevation": true,
+  "aidStations": [],
+  "detection": {
+    "minClimbLength": 300,
+    "noiseTolerance": 8,
+    "smoothWindow": 5
+  }
+}

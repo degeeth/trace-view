@@ -1,0 +1,14 @@
+{
+  "id": "ohm-trail-2018",
+  "name": "Ohm Trail 2018",
+  "subtitle": "Analyse des côtes ≥ 300 m",
+  "gpx": "Ohm_Trail.gpx",
+  "branding": "ohm-trail",
+  "terrainExaggeration": 2.5,
+  "aidStations": [
+    { "name": "Vivaro", "lat": 50.4479671, "lng": 5.7238898 },
+    { "name": "Ninglinspo", "lat": 50.4691417, "lng": 5.7458437, "note": "Aller-retour jusqu'au ravitaillement puis retour sur ses pas" },
+    { "name": "Secheval", "lat": 50.4826439, "lng": 5.7159419 }
+  ],
+  "detection": { "minClimbLength": 300, "noiseTolerance": 8, "smoothWindow": 5 }
+}

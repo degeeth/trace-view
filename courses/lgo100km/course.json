@@ -1,0 +1,33 @@
+{
+  "id": "lgo100km",
+  "name": "La Grande Ourthe 100km",
+  "subtitle": "Analyse des côtes ≥ 300 m",
+  "gpx": "LGO100km.gpx",
+  "branding": "coureurs-celestes",
+  "terrainExaggeration": 2.5,
+  "aidStations": [
+    {
+      "name": "Samrée",
+      "km": 26,
+      "lat": 50.22528,
+      "lng": 5.66562
+    },
+    {
+      "name": "Achouffe",
+      "km": 51,
+      "lat": 50.14999,
+      "lng": 5.74557
+    },
+    {
+      "name": "Nisramont (barrage)",
+      "km": 74,
+      "lat": 50.14597,
+      "lng": 5.66861
+    }
+  ],
+  "detection": {
+    "minClimbLength": 300,
+    "noiseTolerance": 8,
+    "smoothWindow": 5
+  }
+}

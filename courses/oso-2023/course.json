@@ -1,0 +1,108 @@
+{
+  "id": "oso-2023",
+  "name": "OSO 2023",
+  "subtitle": "Analyse des côtes ≥ 300 m",
+  "gpx": "OSO-2023.gpx",
+  "branding": "oso",
+  "terrainExaggeration": 2.5,
+  "statsElevation": "smoothed",
+  "aidStations": [
+    {
+      "name": "Banneux",
+      "km": 16,
+      "supplies": [
+        {
+          "category": "liquide",
+          "label": "Eau plate"
+        },
+        {
+          "category": "liquide",
+          "label": "Coca-Cola"
+        }
+      ],
+      "note": "Contenu fictif (test) : liquide uniquement"
+    },
+    {
+      "name": "Spa (parc de Sept Heures)",
+      "lat": 50.49366,
+      "lng": 5.85673,
+      "supplies": [
+        {
+          "category": "liquide",
+          "label": "Eau plate"
+        },
+        {
+          "category": "liquide",
+          "label": "Boisson isotonique",
+          "brand": "Naak"
+        },
+        {
+          "category": "solide",
+          "label": "Barres énergétiques",
+          "brand": "6D"
+        },
+        {
+          "category": "solide",
+          "label": "Fruits secs"
+        },
+        {
+          "category": "solide",
+          "label": "Quartiers d'orange"
+        },
+        {
+          "category": "chaud",
+          "label": "Soupe"
+        },
+        {
+          "category": "chaud",
+          "label": "Café"
+        }
+      ],
+      "note": "Contenu fictif (test) : toutes les catégories"
+    },
+    {
+      "name": "Oneux",
+      "lat": 50.54695,
+      "lng": 5.83272,
+      "supplies": [
+        {
+          "category": "solide",
+          "brand": "Naak"
+        },
+        {
+          "category": "autre",
+          "label": "Gels énergétiques",
+          "brand": "6D"
+        },
+        {
+          "category": "autre",
+          "label": "Crème anti-frottement"
+        }
+      ],
+      "note": "Contenu fictif (test) : marque sans libellé et catégorie « autre »"
+    },
+    {
+      "name": "Drolenval",
+      "km": 64,
+      "supplies": [
+        {
+          "category": "liquide",
+          "label": "Eau gazeuse"
+        },
+        {
+          "category": "solide",
+          "label": "Tucs"
+        },
+        {
+          "category": "chaud",
+          "label": "Bouillon"
+        }
+      ]
+    }
+  ],
+  "detection": {
+    "minClimbLength": 300,
+    "noiseTolerance": 8,
+    "smoothWindow": 5
+  }
+}

@@ -1,0 +1,44 @@
+[
+  {
+    "id": "lgo100km",
+    "name": "La Grande Ourthe 100km",
+    "distanceKm": 100.2,
+    "dplus": 3408
+  },
+  {
+    "id": "oso-2023",
+    "name": "OSO 2023",
+    "distanceKm": 70.8,
+    "dplus": 2129
+  },
+  {
+    "id": "gtlc-65-2024",
+    "name": "Grand Trail des Lacs & Châteaux 65 km (2024)",
+    "distanceKm": 64.5,
+    "dplus": 2574
+  },
+  {
+    "id": "ohm-trail-2018",
+    "name": "Ohm Trail 2018",
+    "distanceKm": 34.7,
+    "dplus": 2017
+  },
+  {
+    "id": "extratrail-stoumont-30",
+    "name": "Extratrail Stoumont 30 km (noir)",
+    "distanceKm": 30.1,
+    "dplus": 1308
+  },
+  {
+    "id": "hrp-10-lescun-etsaut",
+    "name": "HRP 10 : Lescun, Etsaut",
+    "distanceKm": 14.8,
+    "dplus": 895
+  },
+  {
+    "id": "hrp-11-etsaut-ayous",
+    "name": "HRP 11 : Etsaut, refuge d'Ayous",
+    "distanceKm": 14.2,
+    "dplus": 1638
+  }
+]

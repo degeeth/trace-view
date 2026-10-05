@@ -455,3 +455,410 @@ Ajout de `minzoom` sur les couches de courbes de niveau pour éviter l'encombrem
 | 10 – 11.5 | 1 / 5 km |
 | 11.5 – 13 | 1 / 2 km |
 | ≥ 13 | 1 / 1 km |
+
+---
+
+## 19. Identité visuelle GTLC (DESIGN.md)
+
+**Fichiers** : `DESIGN.md` (créé), `style.css`
+
+- `DESIGN.md` : tokens et règles d'après grandtrail.be (édition Winter) — bleu glacier `#DCECF0`, Montserrat, angles droits
+- `style.css` réécrit sur ces tokens (`--gt-*`) : en-tête bleu nuit, boutons carrés en capitales, panneaux à filet bleu glacier
+- Ravitaillements : cerf du GTLC (logo vectorisé) noir sur cercle blanc, à la place de la banane
+
+---
+
+## 20. Carte 3D façon LiveTrail
+
+**Fichiers** : `index.html`, `styles/topo-trail.json` (créé)
+
+- Relief Terrarium en `tileSize: 256` (512 chargeait un niveau de zoom trop bas)
+- Ombrage doux et chaud (0.35, ombres brunes, lumière 200°)
+- Tracé en 3 couches : halo, contour, trait — option dégradé par pente
+- MapLibre 5 (ciel via `setSky`), fond « Topo trail » (port du style LiveTrail sur OpenFreeMap) par défaut
+- Satellite : orthophotos SPW (Wallonie) par-dessus Esri
+
+---
+
+## 21. Une seule carte MapLibre, code découpé, données séparées
+
+**Fichiers** : `index.html` (réécrit : balisage seul), `js/` (créé), `data/` (créé), `style.css`, `gen_contours.py`
+
+### Une seule carte (Leaflet supprimé)
+- MapLibre sert la 2D et la 3D : le bouton 3D active le relief et incline la caméra
+- Tous les fonds disponibles dans les deux vues (Topo trail par défaut) ; Light / Dark passent sur OpenFreeMap
+  (Carto n'avait pas la police Noto Sans : les libellés km et ravitaillements ne s'y affichaient pas)
+- Curseur du profil et côte sélectionnée visibles en 3D ; en 3D, la caméra vole vers la côte, face à la pente
+- Pastilles de côtes : numéro, D+ et pente en texte au survol (lisible sans distinguer les couleurs)
+
+### Code découpé en modules (`js/`)
+| Fichier | Rôle |
+|---|---|
+| `app.js` | point d'entrée : en-tête, sélection, lien partagé, GPX, onglets mobiles, mode embed |
+| `race.js` | chargement des données, pentes, couleurs des catégories |
+| `map.js` | carte 2D/3D, couches, panneau des fonds, curseur, surbrillance |
+| `map-styles.js` | définition des fonds de carte |
+| `chart.js` | profil altimétrique, info-bulle, barre des ravitaillements |
+| `table.js` | tableau, filtres, tri, mini-profil |
+| `bus.js` | événements entre modules (`climb:select`, `trace:mode`, `cursor:move`…) |
+
+### Données séparées (`data/`)
+- `data/lgo100km.json` : course, statistiques, identité visuelle (couleurs, icône), ravitaillements, tracé, profil, côtes
+- Autre course : `index.html?course=<fichier>` charge `data/<fichier>.json`
+- Courbes de niveau : `data/contours/` — 6,1 Mo → 2,5 Mo (coordonnées à 5 décimales, courbes maîtresses plus
+  dupliquées) ; les courbes fines ne se chargent qu'à partir du zoom 12,5
+
+### Mobile
+- Plus de code mobile séparé : même page, même carte, même tableau ; le CSS masque les colonnes secondaires
+  et un onglet affiche soit la carte + profil, soit le tableau
+- La 3D est disponible sur mobile
+
+### Outils
+- `npm run serve` : serveur local (http://localhost:8080) — les modules et les données exigent HTTP
+- `npm run test:smoke` : test de fumée dans Chrome headless (tableau, carte, modes, sélection, 3D,
+  changements de fond, lien partagé, mobile)
+- MapLibre figé en `5.24.0`
+
+---
+
+## 22. Profil : repères permanents, zoom sur la côte ; pastille Départ/Arrivée
+
+**Fichiers** : `js/chart.js`, `js/race.js`, `js/map.js`, `index.html`, `style.css`, `data/lgo100km.json`
+
+- Profil dessiné sur le tracé complet (2 263 points) au lieu de 454 points sous-échantillonnés :
+  précis en zoom, D+ cumulé plus juste ; le profil sous-échantillonné est retiré des données
+- Repères toujours visibles : départ (vert), point culminant (orange, avec son altitude), arrivée (rouge),
+  ravitaillements (cerf) ; légende à droite des onglets (masquée sur mobile)
+- Sélection d'une côte : le profil zoome sur la côte (± 40 % de sa longueur, au moins ± 500 m), axe des
+  altitudes recalé ; bouton « ↔ Profil complet » / « ⤢ Zoom sur la côte » ; pas de zoom en mode Ravitaillements
+- Parcours en boucle (départ et arrivée à moins de 150 m) : une seule pastille Départ / Arrivée sur la carte
+
+---
+
+## 23. Icônes Lucide à la place des emojis
+
+**Fichiers** : `js/icons.js` (créé), `index.html`, `js/app.js`, `js/chart.js`, `js/map.js`, `js/table.js`, `style.css`
+
+- 14 icônes [Lucide](https://lucide.dev) (licence ISC) embarquées en SVG dans `js/icons.js` : pas de police ni de script externe
+- Dans le HTML : `<i data-icon="route"></i>`, remplacé au démarrage par `hydrateIcons()` ; dans le JS : `icon('download', 13)`
+- Remplacés : titre (montagne), Tableau des côtes, Tracé du parcours, onglets mobiles, GPX, Partager / Copié,
+  Profil complet / Zoom, Tout, chevrons, bouton de réouverture du tableau, départ / arrivée sur la carte
+
+---
+
+## 24. Workflow « ajouter une course » : GPX → données → application
+
+**Fichiers** : `scripts/build_course.py`, `scripts/gen_contours.py` (déplacé, paramétré), `courses/lgo100km/`,
+`branding/gtlc.json`, `data/courses.json`, `.claude/skills/ajouter-course/SKILL.md`, `tests/test_build_course.py`,
+`js/race.js`, `js/map.js`, `js/app.js`, `index.html`, `style.css`, `tests/smoke.mjs`, `package.json`
+
+- `scripts/build_course.py <id>` : lit `courses/<id>/course.json` + GPX, détecte les côtes (algorithme repris de
+  `analyze_climbs.py`, résultats identiques : 44 côtes), calcule les statistiques, place les ravitaillements
+  (km et/ou coordonnées, avec avertissements), écrit `data/<id>.json` et `data/courses.json`.
+  `--check` compare sans écrire.
+- Altitudes : chiffres affichés sur l'altitude **brute** du GPX (D+ 3 408 m, comme Openrunner), détection et
+  profil sur l'altitude **lissée** ; le D+ cumulé de l'info-bulle finit désormais à 3 408 m (il finissait à 2 669 m)
+- `scripts/gen_contours.py <id>` : zone calculée depuis le GPX (+ 2 km), tuiles Copernicus déduites et fusionnées ;
+  courbes par course dans `data/contours/<id>/` (1,6 Mo pour La Grande Ourthe)
+- Identité visuelle partagée entre courses : `branding/gtlc.json`
+- Sélecteur de course dans l'en-tête (affiché à partir de deux courses), `?course=<id>`
+- Skill `ajouter-course` : recueil des infos, construction, correction des avertissements, courbes, vérification
+- `npm run build:course <id>`, `npm run test:build` (10 tests unitaires), `npm run test:smoke -- --course <id>`
+
+---
+
+## 25. GPX sans altitudes : récupération sur demande
+
+**Fichiers** : `scripts/build_course.py`, `scripts/gen_contours.py`, `tests/test_build_course.py`,
+`.claude/skills/ajouter-course/SKILL.md`, `README.md`, `js/app.js`
+
+- Un GPX sans altitudes (ex. export Geolives) arrête la construction avec les solutions possibles
+- Récupération **uniquement si l'utilisateur l'active** : `--fill-elevation` ou `"fillElevation": true` dans
+  `course.json` ; le skill demande l'accord avant de l'ajouter
+- Tracé densifié (1 point / 20 m), altitudes lues dans Copernicus GLO-30, cache `courses/<id>/elevation-cache.json`
+- Statistiques sur l'altitude lissée dans ce cas (sur Stoumont 30 km : D+ brut du modèle 2 182 m, lissé 1 308 m)
+- Sous-titre de la course : « Altitudes : modèle Copernicus » quand elles ont été récupérées
+- 4 tests unitaires de plus (14 au total), sans accès réseau
+
+---
+
+## 26. Course ajoutée : Extratrail Stoumont 30 km (noir)
+
+**Fichiers** : `courses/extratrail-stoumont-30/` (GPX, `course.json`, `elevation-cache.json`),
+`branding/extratrail.json`, `data/extratrail-stoumont-30.json`, `data/contours/extratrail-stoumont-30/`,
+`data/courses.json`
+
+- GPX Geolives sans altitudes : récupérées depuis Copernicus GLO-30 avec l'accord de l'utilisateur
+  (`"fillElevation": true`), tracé densifié à 1 712 points
+- 30,1 km, +1 308 m (altitude lissée), 180 → 574 m, boucle au départ de Stoumont
+- 13 côtes ≥ 300 m : 3 rouges, 6 orange, 2 vertes, 2 < 4 %
+- Aucun ravitaillement pour l'instant (à compléter dans `course.json`)
+- Identité `branding/extratrail.json` provisoire : couleurs actuelles, goutte d'eau comme icône des ravitaillements
+
+---
+
+## 27. Course ajoutée : OSO 2023
+
+**Fichiers** : `courses/oso-2023/` (GPX RouteYou, `course.json`), `branding/oso.json`, `data/oso-2023.json`,
+`data/contours/oso-2023/`, `data/courses.json`
+
+- GPX RouteYou avec altitudes : 70,8 km, 100 → 371 m, boucle Pepinster – Theux – Spa – Chaudfontaine
+- D+ **2 129 m** : statistiques sur l'altitude lissée (`"statsElevation": "smoothed"`, nouvelle option) — le brut
+  (2 797 m) était gonflé par les altitudes arrondies de RouteYou ; l'organisation annonce 2 100–2 300 m
+- 29 côtes ≥ 300 m : 3 rouges, 5 orange, 12 vertes, 9 < 4 %
+- Ravitaillements (site de l'organisation, km arrondis, placés d'après les indications) : Banneux km 16,
+  Spa km 35,5 (parc de Sept Heures, au pied de la côte 16), Oneux km 49,4 (dans le village), Drolenval km 64
+- Identité `branding/oso.json` provisoire (couleurs actuelles, goutte d'eau)
+
+---
+
+## 28. Ravitaillements : icône par défaut et contenu
+
+**Fichiers** : `scripts/build_course.py`, `branding/defaut.json` (créé), `branding/extratrail.json`, `branding/oso.json`,
+`js/race.js`, `js/map.js`, `js/chart.js`, `js/icons.js`, `style.css`, `tests/test_build_course.py`, skill, README
+
+- Icône par défaut des ravitaillements : **couteau / fourchette** (Lucide), quand l'identité n'en fournit pas
+  (la goutte d'eau provisoire d'Extratrail et d'OSO est retirée) ; le GTLC garde son cerf
+- Identité `defaut` quand `course.json` n'en précise pas ; icônes pleines (logos) ou au trait (`"style": "stroke"`)
+- Chaque ravitaillement peut décrire son **contenu** (`supplies` : liquide, solide, chaud avec icône, ou texte libre),
+  ses **marques** (`brands` : Naak, 6D…) et une **note** — affichés dans la popup de la carte et la barre du profil
+- Km au format français (35,5) ; noms échappés dans le HTML ; 2 tests unitaires de plus (17)
+
+---
+
+## 29. Contenu des ravitaillements structuré
+
+**Fichiers** : `scripts/build_course.py`, `js/race.js`, `js/chart.js`, `style.css`, `tests/test_build_course.py`,
+README, skill
+
+- `supplies` devient un tableau d'éléments `{ "category", "label", "brand" }` dans `course.json`
+  (`category` : liquide, solide, chaud, autre) ; le champ `brands` disparaît (marque par produit)
+- Validation au build : catégorie inconnue → « autre », éléments vides ou mal formés ignorés, avertissements
+- Popup de la carte : contenu regroupé par catégorie (« Liquide : Eau plate, Boisson isotonique (Naak) ») ;
+  barre du profil : une icône par catégorie, détail au survol ; 18 tests unitaires
+
+---
+
+## 30. Règle : jamais de tiret cadratin dans l'application
+
+**Fichiers** : `CLAUDE.md` (créé), `index.html`, `js/app.js`, `js/map.js`, `js/chart.js`, `js/map-styles.js`,
+`js/race.js`, `js/table.js`, `js/icons.js`, `style.css`, `branding/*.json`, `scripts/build_course.py`, `tests/smoke.mjs`
+
+- Le caractère « — » est retiré de l'interface (sous-titre, titre de l'onglet, popups, crédits, info-bulles),
+  des identités et des commentaires du code livré ; remplacé par « · », une virgule ou des parenthèses
+- Libellé des côtes : « Côte #3 (4,29 → 7,15 km) » au lieu de « (4.29 – 7.15 km) »
+- Règle inscrite dans `CLAUDE.md` ; le test de fumée échoue si le caractère s'affiche, `build_course.py`
+  le signale dans `course.json`
+
+---
+
+## 31. Nouveau fond de carte par défaut : « Sentiers »
+
+**Fichiers** : `js/style-sentiers.js` (créé), `js/map-styles.js`, `js/map.js`, `style.css`, `index.html`,
+`tests/smoke.mjs`, `README.md`
+
+- Style propre, conçu pour le trail, sur les tuiles OpenFreeMap : palette définie dans le fichier (fond ivoire,
+  forêts vert tendre, eau, routes), épaisseurs sur une échelle unique
+- Utilise le revêtement et le type de voie des tuiles : sentiers en terre (tirets rouge-brun serrés), chemins
+  forestiers (tirets bruns longs), petites routes non revêtues (bordure en tirets), voies piétonnes revêtues
+  discrètes, escaliers
+- Sommets : icône montagne (Lucide) + nom + altitude ; bâtiments, noms de rues et de rivières
+- Nouveaux réglages de l'ombrage du relief (lumière nord-ouest, ombres olive) et des courbes de niveau
+- Topo trail et Terrain **dépréciés** (repris de LiveTrail) : rangés dans « Anciens » du panneau, à supprimer
+
+---
+
+## 32. Sommets visibles seulement en zoom rapproché, réglable
+
+**Fichiers** : `js/config.js` (créé), `js/map.js`, `tests/smoke.mjs`, `docs/CARTOGRAPHIE.md`, `README.md`
+
+- Nouveau fichier de réglages `js/config.js` ; `peaksMinZoom: 15` (au lieu de 11 dans Sentiers, 9 dans Topo trail)
+- Appliqué à toutes les couches de sommets (`mountain_peak`) à chaque chargement de fond
+- Vérifié : col de la Vecquée absent au zoom 14,9, affiché au zoom 15,1 ; test de fumée : 26 vérifications
+
+---
+
+## 33. Réglages de la carte regroupés dans `js/config.js`
+
+**Fichiers** : `js/config.js`, `js/map.js`, `js/map-styles.js`, `tests/smoke.mjs`, `docs/CARTOGRAPHIE.md`, `README.md`
+
+- Ajoutés à `MAP_CONFIG` : `defaultStyle`, `stylePanelCollapsed`, `contoursMinZoom`, `thinContoursLoadZoom`,
+  `kmMarkersEvery5Zoom`, `arrowsZooms`, `hillshadeIntensity`, `hillshadeLightDirection`, `pitch3D`, `bearing3D`,
+  `climbFlightPitch`, `climbMaxZoom`, `animationDuration` (en plus de `peaksMinZoom`) ; `DEFAULT_STYLE` retiré
+  de `js/map-styles.js`
+- Les zooms internes des fonds restent dans les styles ; l'exagération 3D reste par fond (`MAP_STYLES`)
+- Test de fumée : vérifie l'application des réglages ; vérifié aussi avec une configuration modifiée
+  (fond, panneau, bornes, flèches, ombrage, inclinaison)
+
+---
+
+## 34. Skill traduit en anglais : `/add-course`
+
+**Fichiers** : `.claude/skills/add-course/SKILL.md` (remplace `.claude/skills/ajouter-course/`), `README.md`
+
+- Skill et commande renommés `add-course`, texte en anglais
+- Consignes ajoutées : répondre dans la langue de l'utilisateur, écrire `course.json` en français, jamais de tiret
+  cadratin ; les valeurs du format de données (`liquide`, `solide`, `chaud`, `autre`, `defaut`) restent en français
+
+---
+
+## 35. Course ajoutée : Grand Trail des Lacs & Châteaux 65 km (2024)
+
+**Fichiers** : `courses/gtlc-65-2024/` (GPX Trace de Trail, `course.json`), `data/gtlc-65-2024.json`,
+`data/contours/gtlc-65-2024/`, `data/courses.json`
+
+- 64,5 km en boucle autour de Malmedy (lac de Robertville), 334 → 602 m, identité GTLC (cerf)
+- D+ **2 574 m** sur l'altitude lissée (`"statsElevation": "smoothed"`) : le D+ brut du GPX (3 435 m) dépasse
+  nettement le chiffre officiel (≈ 2 500 à 2 700 m)
+- 36 côtes ≥ 300 m : 12 rouges, 5 orange, 10 vertes, 9 < 4 %
+- Courbes de niveau : zone à cheval sur deux tuiles Copernicus (6° E), fusionnées sans couture visible
+- Ravitaillements : à compléter
+
+---
+
+## 36. Course ajoutée : HRP 11, Etsaut, refuge d'Ayous ; réglages satellite
+
+**Fichiers** : `courses/hrp-11-etsaut-ayous/`, `data/hrp-11-etsaut-ayous.json`, `data/contours/hrp-11-etsaut-ayous/`,
+`data/courses.json`, `js/config.js`, `js/map.js`, `tests/smoke.mjs`, `docs/CARTOGRAPHIE.md`
+
+- GPX Strava (caractère parasite en tête de fichier retiré) : 14,2 km, +1 638 m, 592 → 2 175 m, étape en ligne
+- 2 côtes ≥ 300 m, toutes deux rouges (5,7 km à 12 % et 6,5 km à 14 %) ; ravitaillement : refuge d'Ayous
+  (repas, boissons chaudes) ; identité par défaut
+- `satelliteHillshade` (défaut `false`) : l'ombrage du relief délavait les photos satellites en montagne
+- `fog` / `satelliteFog` (défaut `true` / `false`) : brume vers l'horizon en 3D
+- Test de fumée : vérification du zoom du profil rendue indépendante de la course, ombrage selon le réglage
+- Style Sentiers : chemins et sentiers affinés (≈ 1 px au zoom 14, comme Topo trail), voies piétonnes aussi
+
+---
+
+## 37. Option « qualité haute » par course
+
+**Fichiers** : `scripts/build_course.py`, `js/map.js`, `.claude/skills/add-course/SKILL.md`, `tests/test_build_course.py`,
+`docs/CARTOGRAPHIE.md`, `README.md`
+
+- `"quality": "high"` dans `course.json` : relief **Mapterhorn** jusqu'au zoom 17 (au lieu de Terrarium AWS, zoom 14)
+  et, sur le fond Satellite, orthophotos **IGN** en France (rochers, éboulis, sentiers visibles)
+- Le skill `add-course` propose systématiquement l'option, avec ses contreparties (données plus lourdes, deux
+  services tiers de plus), et la recommande en montagne ; valeur invalide → `standard` avec avertissement
+- Comparaison sur l'HRP 11 : `capture/v22_qualite_comparaison.png`
+- HRP 11 passée en qualité haute (`"quality": "high"`)
+
+---
+
+## 38. Profil : onglet Ravitaillements par défaut
+
+- « Ravitaillements » devient le premier onglet du profil et celui affiché à l'ouverture (puis Côtes, Pente) ;
+  la carte s'ouvre avec le tracé simple
+
+---
+
+## 39. Course ajoutée : HRP 10, Lescun, Etsaut
+
+**Fichiers** : `courses/hrp-10-lescun-etsaut/`, `data/hrp-10-lescun-etsaut.json`, `data/contours/hrp-10-lescun-etsaut/`,
+`data/courses.json`, `scripts/build_course.py`
+
+- 14,8 km en ligne, +895 m / −1 148 m, 592 → 1 611 m ; qualité haute ; identité par défaut ; sans ravitaillement
+- 4 côtes ≥ 300 m : 1 rouge (4 km à 15,2 %), 1 orange, 2 < 4 %
+- `build_course.py` ignore les caractères parasites avant le XML d'un GPX (avertissement), au lieu d'échouer
+
+---
+
+## 40. Exagération du relief 3D par course ; backlog
+
+**Fichiers** : `scripts/build_course.py`, `js/map.js`, `courses/*/course.json`, `tests/`, skill, README,
+`docs/CARTOGRAPHIE.md`, `docs/BACKLOG.md` (créé)
+
+- `"terrainExaggeration"` (1 à 5) dans `course.json` remplace l'exagération du fond de carte en 3D
+- ×2,5 pour les quatre courses ardennaises (La Grande Ourthe, OSO, Stoumont, GTLC 65) ; les étapes HRP gardent ×1,5
+- Le skill la propose selon le terrain ; valeur invalide ignorée avec avertissement ; tests unitaire et de fumée
+- `docs/BACKLOG.md` : idées retenues (ombrage par course, ombrage des pentes, courbes à 5 m, teinte d'altitude…)
+
+---
+
+## 41. Identité des Coureurs Célestes pour La Grande Ourthe ; thème d'interface par identité
+
+**Fichiers** : `courses/lgo100km/DESIGN.md` (créé), `branding/coureurs-celestes.json` (créé),
+`courses/lgo100km/course.json`, `style.css`, `js/app.js`, `js/race.js`, `js/map.js`, `js/chart.js`, README, skill
+
+- `DESIGN.md` propre à la course, d'après lescoureurscelestes.be (logo, polices, couleurs du site)
+- Identité `coureurs-celestes` : tracé bleu profond `#1E5AA8`, icône des ravitaillements = empreinte de semelle
+  vectorisée depuis le logo ; La Grande Ourthe n'affiche plus le cerf du GTLC
+- Thème d'interface par identité (`theme` dans `branding/<nom>.json`) : accent, encre, en-tête, arrondis, polices
+  appliqués via les variables CSS ; nouveaux jetons `--gt-radius`, `--gt-font-display`, `--gt-trace`,
+  teintes dérivées de l'accent (`color-mix`)
+- Icône des ravitaillements dimensionnée selon ses proportions (icônes horizontales lisibles) et colorable
+- En-tête : logo de l'organisation à côté du titre (`"headerLogo": true` dans l'identité), activé pour La Grande Ourthe
+- Logo dans l'en-tête aussi pour l'identité GTLC (cerf) : GTLC 65 Malmedy
+
+---
+
+## 42. DESIGN.md propres à l'OSO et à l'Extratrail
+
+**Fichiers** : `courses/oso-2023/DESIGN.md`, `courses/extratrail-stoumont-30/DESIGN.md` (créés)
+
+- OSO : identité du Cercle Sportif Olnois (vert pomme `#8DC63F`, Sora / Poppins, angles droits), proposition
+  pour `branding/oso.json` (tracé violet `#7B2D8E`) ; pas de logo propre à la course, celui du club
+- Extratrail : réseau de parcours permanents (pas de course ni de ravitaillement), code couleur des distances
+  (noir = 30 km), logo SVG, mauve de Stoumont ; proposition pour `branding/extratrail.json` (tracé `#6C4796`)
+
+---
+
+## 43. Identités OSO et Extratrail appliquées
+
+**Fichiers** : `branding/oso.json`, `branding/extratrail.json`, `courses/oso-2023/DESIGN.md`,
+`courses/extratrail-stoumont-30/DESIGN.md`, README, `docs/BACKLOG.md`
+
+- OSO : coureuse vectorisée depuis le logo du Cercle Sportif Olnois (en-tête et ravitaillements), tracé violet
+  `#7B2D8E`, accent vert pomme `#8DC63F`, en-tête vert-noir, angles droits, Sora / Poppins
+- Extratrail : emblème repris du SVG du site, tracé `#6C4796`, accent vert anis `#BBCE00`, en-tête `#323232`,
+  arrondis 8 px, Saira
+- Plus aucune identité provisoire ; backlog : logo propre à l'OSO, GPX Extratrail avec altitudes, accords
+
+---
+
+## 44. Départ / arrivée sobres ; transition 2D ↔ 3D progressive
+
+**Fichiers** : `js/map.js`, `js/chart.js`, `style.css`, `index.html`, `tests/smoke.mjs`, `docs/CARTOGRAPHIE.md`
+
+- Départ / arrivée : pastille blanche cerclée de l'encre de l'identité avec pictogramme fin (lecture, drapeau),
+  au lieu du vert / rouge ; sur le profil, anneau (départ) et pastille pleine (arrivée) de la même encre
+- Passage en 3D : le relief monte progressivement (exagération de 0 à la cible) en même temps que la caméra
+  s'incline, et s'aplatit au retour en 2D ; plus de saut brutal du dénivelé
+
+---
+
+## 45. Passage 2D ↔ 3D en fondu enchaîné
+
+**Fichiers** : `js/config.js`, `js/map.js`, `js/app.js`, `style.css`, `index.html`, `tests/smoke.mjs`, `docs/CARTOGRAPHIE.md`,
+`docs/BACKLOG.md`
+
+- Par défaut, image figée de la carte par-dessus, bascule instantanée dessous, puis fondu (450 ms) une fois la
+  nouvelle vue dessinée : fluide sur une machine modeste, plus de saut de dénivelé visible
+- `mode3DTransition: 'animate'` garde l'ancienne animation (caméra + relief progressif)
+- Image figée copiée dans un canvas (pas d'encodage JPEG, quasi immédiat) ; si elle tarde plus de
+  `fadeSnapshotWait` (400 ms), bascule directe sans fondu
+- Changement de fond en 3D : relief retiré avant `setStyle` puis remis au `style.load` (corrige l'erreur MapLibre
+  « shaderPreludeCode », relief dessiné avant que le nouveau style soit prêt)
+- Test de fumée : les 404 des orthophotos IGN (hors de France) sont ignorés
+- Retour visuel pendant la bascule : image figée (à sa taille exacte, sans effet de zoom) voilée et légèrement
+  floutée par un calque `backdrop-filter` dès le clic, pastille
+  « Passage en 3D… » / « Retour en 2D… » si l'attente dépasse 300 ms (`fadeLabelDelay`), bouton 2D/3D grisé
+  avec indicateur tournant jusqu'à la fin du fondu
+- Options d'allègement et d'animations réduites notées dans le backlog
+
+---
+
+## 46. Course : Ohm Trail 2018 (Ohm Trail Original, Aywaille)
+
+**Fichiers** : `courses/ohm-trail-2018/` (`course.json`, `Ohm_Trail.gpx`, `DESIGN.md`), `branding/ohm-trail.json`,
+`data/ohm-trail-2018.json`, `data/courses.json`, `data/contours/ohm-trail-2018/`, `style.css`, `index.html`
+
+- Trace Strava du 3 juin 2018 : 34,7 km, +2 017 m (1 950 m annoncés par l'organisation), 18 322 points,
+  16 côtes ≥ 300 m (rouge 7, orange 2, vert 6, < 4 % 1), relief 3D ×2,5, qualité standard, courbes de niveau
+- 3 ravitaillements placés par coordonnées depuis la carte Google My Maps de l'organisation : Vivaro (km 9,3),
+  Ninglinspo (km 19,9, aller-retour), Secheval (km 25,4)
+- Identité Ohm Trail : oméga orange du logo vectorisé (ravitaillements et en-tête), accent `#E84E0F`, en-tête
+  anthracite `#313131`, tracé anthracite `#32373C` (l'orange est réservé à la catégorie de pente 7 à 10 %),
+  Montserrat et Open Sans
+- `style.css` : boutons à contour (Tout, GPX, Partager, 3D) écrits à l'encre (`--gt-ink`) et non plus en
+  `--gt-on-primary`, qui n'est lisible que sur l'accent (texte blanc invisible sur fond blanc avec l'identité Ohm)

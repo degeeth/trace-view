@@ -1,0 +1,15 @@
+{
+  "id": "gtlc-65-2024",
+  "name": "Grand Trail des Lacs & Châteaux 65 km (2024)",
+  "subtitle": "Analyse des côtes ≥ 300 m",
+  "gpx": "GT65-2024.gpx",
+  "branding": "gtlc",
+  "terrainExaggeration": 2.5,
+  "statsElevation": "smoothed",
+  "aidStations": [],
+  "detection": {
+    "minClimbLength": 300,
+    "noiseTolerance": 8,
+    "smoothWindow": 5
+  }
+}

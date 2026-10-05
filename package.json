@@ -1,0 +1,14 @@
+{
+  "name": "trace-view",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "serve": "node scripts/serve.mjs",
+    "build:course": "python3 scripts/build_course.py",
+    "test:build": "python3 -m unittest tests/test_build_course.py",
+    "test:smoke": "node tests/smoke.mjs"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^23.11.1"
+  }
+}

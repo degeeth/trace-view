@@ -1,0 +1,29 @@
+{
+  "id": "hrp-11-etsaut-ayous",
+  "name": "HRP 11 : Etsaut, refuge d'Ayous",
+  "subtitle": "Analyse des côtes ≥ 300 m",
+  "gpx": "HRP-11-Etsaut-Ayous.gpx",
+  "branding": "defaut",
+  "quality": "high",
+  "aidStations": [
+    {
+      "name": "Refuge d'Ayous",
+      "km": 14.2,
+      "supplies": [
+        {
+          "category": "chaud",
+          "label": "Repas"
+        },
+        {
+          "category": "chaud",
+          "label": "Boissons chaudes"
+        }
+      ]
+    }
+  ],
+  "detection": {
+    "minClimbLength": 300,
+    "noiseTolerance": 8,
+    "smoothWindow": 5
+  }
+}

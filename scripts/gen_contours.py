@@ -1,31 +1,67 @@
 """
-Génère contours_thin.geojson + contours_thick.geojson
-depuis le DEM Copernicus GLO-30 (domaine public, AWS Open Data).
-Post-traitement : chaînage des segments → lissage Chaikin → simplification Douglas-Peucker.
+Génère les courbes de niveau d'une course depuis le DEM Copernicus GLO-30 (domaine public, AWS Open Data).
+
+    python3 scripts/gen_contours.py <id>     → data/contours/<id>/thin.geojson + thick.geojson
+
+La zone couverte est celle du GPX de la course (courses/<id>/) avec une marge ; les tuiles Copernicus
+(1° × 1°) sont déduites de cette zone et fusionnées si le parcours en chevauche plusieurs.
+Dépendances : rasterio, numpy (pip install rasterio). Relancer ensuite build_course.py pour que
+l'application référence les courbes.
+Post-traitement : chaînage des segments → lissage Chaikin → simplification Douglas-Peucker
+→ coordonnées arrondies à 5 décimales (≈ 1 m, bien sous la résolution de 30 m du DEM).
+thin = courbes intermédiaires seules (les maîtresses sont dans thick, pas de doublon).
 """
-import rasterio
-import rasterio.windows
-import numpy as np
+import argparse
 import json
+import math
+import os
+import sys
 from collections import defaultdict
 
-BBOX    = (5.54, 50.07, 5.80, 50.30)   # (lng_min, lat_min, lng_max, lat_max)
-DEM_URL = ('https://copernicus-dem-30m.s3.amazonaws.com/'
-           'Copernicus_DSM_COG_10_N50_00_E005_00_DEM/'
-           'Copernicus_DSM_COG_10_N50_00_E005_00_DEM.tif')
-OUT     = '/Users/thomasdegee/Dev/source/trace-view/'
+import numpy as np
+import rasterio
+import rasterio.merge
+import rasterio.windows
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from build_course import ROOT, copernicus_tile_url, load_json, parse_gpx  # noqa: E402
+
+MARGIN_KM     = 2      # marge autour du parcours
 INTERVAL      = 10     # intervalle de courbes en mètres
 THICK_EVERY   = 50     # courbes maîtresses tous les N mètres
 SMOOTH_ITER   = 3      # itérations Chaikin
 DP_EPSILON    = 5e-5   # simplification Douglas-Peucker (°, ≈5 m)
+DECIMALS      = 5      # précision des coordonnées exportées (≈1 m)
 MIN_CHAIN_PTS = 4      # ignore les chaînes trop courtes
 
+# ── 0. Zone du parcours ────────────────────────────────────────────
+parser = argparse.ArgumentParser(description='Courbes de niveau d\'une course (Copernicus GLO-30)')
+parser.add_argument('course', help='identifiant de la course (dossier courses/<id>)')
+COURSE = parser.parse_args().course
+course = load_json(os.path.join(ROOT, 'courses', COURSE, 'course.json'))
+track = parse_gpx(os.path.join(ROOT, 'courses', COURSE, course['gpx']))
+lats, lngs = [p['lat'] for p in track], [p['lon'] for p in track]
+d_lat = MARGIN_KM / 111.32
+d_lng = MARGIN_KM / (111.32 * math.cos(math.radians(sum(lats) / len(lats))))
+BBOX = (min(lngs) - d_lng, min(lats) - d_lat, max(lngs) + d_lng, max(lats) + d_lat)
+OUT = os.path.join(ROOT, 'data', 'contours', COURSE)
+
+tiles = [copernicus_tile_url(la, ln)
+         for la in range(math.floor(BBOX[1]), math.floor(BBOX[3]) + 1)
+         for ln in range(math.floor(BBOX[0]), math.floor(BBOX[2]) + 1)]
+
 # ── 1. Lecture du DEM ──────────────────────────────────────────────
-print('Ouverture du DEM Copernicus GLO-30…')
-with rasterio.open(DEM_URL) as src:
-    win  = rasterio.windows.from_bounds(*BBOX, src.transform)
-    elev = src.read(1, window=win, masked=True).astype(np.float32)
-    tr   = src.window_transform(win)
+print(f'Zone {BBOX[0]:.3f},{BBOX[1]:.3f} → {BBOX[2]:.3f},{BBOX[3]:.3f}, {len(tiles)} tuile(s) Copernicus GLO-30…')
+if len(tiles) == 1:
+    with rasterio.open(tiles[0]) as src:
+        win  = rasterio.windows.from_bounds(*BBOX, src.transform)
+        elev = src.read(1, window=win, masked=True).astype(np.float32)
+        tr   = src.window_transform(win)
+else:
+    srcs = [rasterio.open(u) for u in tiles]
+    mosaic, tr = rasterio.merge.merge(srcs, bounds=BBOX)
+    elev = np.ma.masked_equal(mosaic[0].astype(np.float32), srcs[0].nodata) if srcs[0].nodata is not None else mosaic[0].astype(np.float32)
+    for s_ in srcs: s_.close()
 
 elev = np.ma.filled(elev, 0)
 H, W = elev.shape
@@ -142,7 +178,12 @@ def process_level(lv):
     for ch in chains:
         ch = chaikin(ch)
         ch = douglas_peucker(ch)
-        if len(ch)>=2: result.append(ch)
+        # Arrondi + suppression des points devenus identiques
+        rounded = []
+        for x, y in ch:
+            p = [round(x, DECIMALS), round(y, DECIMALS)]
+            if not rounded or rounded[-1] != p: rounded.append(p)
+        if len(rounded)>=2: result.append(rounded)
     return result
 
 min_e  = int(np.floor(elev.min()/INTERVAL)*INTERVAL)
@@ -161,14 +202,15 @@ for lv in levels:
     feat = {'type':'Feature',
             'properties':{'ele':lv},
             'geometry':{'type':'MultiLineString','coordinates':chains}}
-    thin_features.append(feat)
     if lv % THICK_EVERY == 0: thick_features.append(feat)
+    else:                     thin_features.append(feat)
 
 # ── 7. Export ──────────────────────────────────────────────────────
-for name,feats in [('contours_thin',thin_features),('contours_thick',thick_features)]:
+os.makedirs(OUT, exist_ok=True)
+for name,feats in [('thin',thin_features),('thick',thick_features)]:
     fc  = {'type':'FeatureCollection','features':feats}
     raw = json.dumps(fc, separators=(',',':'))
-    with open(OUT+name+'.geojson','w') as f: f.write(raw)
+    with open(os.path.join(OUT, name+'.geojson'),'w') as f: f.write(raw)
     print(f'→ {name}.geojson  ({len(raw)/1024:.0f} KB, {len(feats)} niveaux)')
 
-print('Terminé !')
+print(f'Terminé ! Relancer : python3 scripts/build_course.py {COURSE}')

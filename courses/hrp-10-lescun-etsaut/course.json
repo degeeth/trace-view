@@ -1,0 +1,10 @@
+{
+  "id": "hrp-10-lescun-etsaut",
+  "name": "HRP 10 : Lescun, Etsaut",
+  "subtitle": "Analyse des côtes ≥ 300 m",
+  "gpx": "HRP-10-Lescun-Etsaut.gpx",
+  "branding": "defaut",
+  "quality": "high",
+  "aidStations": [],
+  "detection": { "minClimbLength": 300, "noiseTolerance": 8, "smoothWindow": 5 }
+}
