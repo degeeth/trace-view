@@ -8,6 +8,7 @@
 // Chrome : chemin par défaut macOS, sinon variable CHROME_PATH.
 import puppeteer from 'puppeteer-core';
 import { startServer } from '../scripts/serve.mjs';
+import { readFileSync } from 'node:fs';
 
 const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 // Bruit réseau sans rapport avec l'application (tuiles raster tierces)
@@ -24,8 +25,11 @@ function check(name, ok, detail = '') {
 
 const server = await startServer(0);
 const courseArg = process.argv.indexOf('--course');
-const COURSE = courseArg > 0 ? process.argv[courseArg + 1] : null;
-const BASE = `http://localhost:${server.address().port}/index.html` + (COURSE ? `?course=${COURSE}` : '');
+// Sans --course : la première course du catalogue (index.html sans paramètre est la page d'accueil)
+const CATALOG = JSON.parse(readFileSync(new URL('../data/courses.json', import.meta.url)));
+const COURSE = courseArg > 0 ? process.argv[courseArg + 1] : CATALOG[0].id;
+const ROOT = `http://localhost:${server.address().port}/index.html`;
+const BASE = `${ROOT}?course=${COURSE}`;
 const browser = await puppeteer.launch({
   executablePath: CHROME,
   headless: 'new',
@@ -70,14 +74,8 @@ try {
   }));
   check('D+ cumulé à l\'arrivée = D+ de l\'en-tête', Math.abs(dplus.header - dplus.cumul) <= 2,
     `${dplus.cumul} m / ${dplus.header} m`);
-  const picker = await page.evaluate(async () => {
-    const catalog = await fetch('data/courses.json').then(r => r.json());
-    const el = document.querySelector('.course-picker');
-    return { count: catalog.length, visible: !el.hidden, value: document.querySelector('#course-select').value,
-             id: trace.race.race.id };
-  });
-  check('Sélecteur de course', picker.count > 1 ? picker.visible && picker.value === picker.id : !picker.visible,
-    `${picker.count} course(s)`);
+  check('Retour à la page d\'accueil (plus de sélecteur)', await page.evaluate(() =>
+    !document.querySelector('#course-select') && new URL(document.querySelector('.back-link').href).search === ''));
   check('En-tête et statistiques générés', await page.$eval('#race-name', el => el.textContent.length > 0)
     // 7 statistiques, plus le départ et le temps limite si la course les indique
     && await page.$$eval('.stats-bar .stat', s => s.length)
@@ -224,6 +222,21 @@ try {
   await sleep(1500);
   check(`Lien #climb-${linkNum} : côte sélectionnée à l'ouverture`, await shared.page.evaluate(n => trace.selected?.num === n, linkNum));
   await shared.page.close();
+
+  // ═══ Page d'accueil ═══
+  const dash = await browser.newPage();
+  await dash.setViewport({ width: 1440, height: 900 });
+  const dashErrors = [];
+  dash.on('pageerror', e => dashErrors.push(e.message));
+  await dash.goto(ROOT, { waitUntil: 'networkidle2', timeout: 60000 });
+  const tiles = await dash.$$eval('.dash-tile', els => els.map(a => a.getAttribute('href')));
+  const groups = await dash.$$eval('.dash-group', els => els.length);
+  check('Page d\'accueil : une tuile par parcours, regroupées par organisation',
+    tiles.length === CATALOG.length && groups > 0 && tiles.every(h => h.startsWith('?course=')), `${tiles.length} tuiles, ${groups} groupes`);
+  await Promise.all([dash.waitForNavigation({ waitUntil: 'domcontentloaded' }), dash.click(`.dash-tile[href="?course=${COURSE}"]`)]);
+  check('Page d\'accueil : la tuile ouvre le parcours', new URL(dash.url()).searchParams.get('course') === COURSE
+    && dashErrors.length === 0, dashErrors.join(' | '));
+  await dash.close();
 
   // ═══ Mobile ═══
   const mobile = await openPage(BASE, { width: 390, height: 844, isMobile: true, hasTouch: true });

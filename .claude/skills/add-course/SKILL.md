@@ -1,6 +1,6 @@
 ---
 name: add-course
-description: Adds or updates a course (trail running route) in trace-view from a GPX file: climb detection, statistics, aid stations, contour lines, course selector, verification. Use when the user provides a GPX file or asks to add, import or update a route, a distance or a course, or to change its aid stations.
+description: Adds or updates a course (trail running route) in trace-view from a GPX file: climb detection, statistics, aid stations, contour lines, home page tile, verification. Use when the user provides a GPX file or asks to add, import or update a route, a distance or a course, or to change its aid stations.
 ---
 
 # Add a course to trace-view
@@ -28,6 +28,7 @@ Ask for whatever is not already known (a single grouped question):
 | Display name | yes | « La Grande Ourthe 100km » |
 | Visual identity | no | existing identity (`gtlc`…) or a new one (`branding/<name>.json`): colours + **aid station icon**. Ask whether the organiser has its own icon (logo, SVG); otherwise leave it out and the default **knife and fork** icon applies. No identity given: `defaut` |
 | Aid stations | no | name + **km** (simplest, usually given by the organiser) **or** name + coordinates, or both; for each one, also ask for its **contents** (products, with their category and brand) and its **time barrier** if known |
+| Group | no | home page group (`"group"`), for courses of the same series without their own identity (HRP stages); otherwise grouped by organisation |
 | Start and time limit | no | start date and time (`"start": "2026-11-07T09:00"`), required for time barriers; finish time barrier (`"finishCutoff": "20:00"`); barriers per aid station (`"cutoff": "11:15"`) |
 | Detection thresholds | no | defaults: climbs ≥ 300 m, tolerance 8 m, smoothing 5 points; only change on request |
 | Display quality | no | **always offer it** (see « High quality » below), default `standard` |
@@ -174,7 +175,7 @@ npm run test:smoke -- --course <id>
 ```
 
 Then run `npm run serve` and open `http://localhost:8080/?course=<id>` (or take a screenshot with the driven
-browser): track, coloured climbs, aid stations in the right places, elevation profile, course selector in the
+browser): track, coloured climbs, aid stations in the right places, elevation profile, the course's tile on the home page (`index.html` without parameter, grouped with its organisation) in the
 header (visible as soon as there are two courses). Show the screenshot to the user.
 
 ## 6. Finish

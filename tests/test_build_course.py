@@ -35,7 +35,7 @@ class LaGrandeOurthe(unittest.TestCase):
         self.assertEqual(stats['distance'], '100,2 km')
         self.assertEqual(stats['dplus'], '+3 408 m')
         self.assertEqual(stats['altMax'], '643 m')
-        self.assertEqual(self.catalog, {'distanceKm': 100.2, 'dplus': 3408})
+        self.assertEqual(self.catalog, {'distanceKm': 100.2, 'dplus': 3408, 'branding': 'coureurs-celestes'})
 
     def test_track(self):
         track = self.data['track']

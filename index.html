@@ -10,19 +10,24 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css"/>
   <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
 
-  <link rel="stylesheet" href="style.css?v=25"/>
-  <script type="module" src="js/app.js?v=37"></script>
+  <link rel="stylesheet" href="style.css?v=29"/>
+  <script type="module" src="js/app.js?v=40"></script>
 </head>
 <body>
 
 <header>
   <h1><i data-icon="mountain-snow" data-size="20"></i> <span id="race-name"></span></h1>
   <span id="race-subtitle"></span>
-  <label class="course-picker" hidden>
-    <span class="visually-hidden">Parcours</span>
-    <select id="course-select"></select>
-  </label>
+  <a class="back-link" href="index.html"><i data-icon="arrow-left" data-size="14"></i> Tous les parcours</a>
 </header>
+
+<!-- Page d'accueil (index.html sans paramètre) : tuiles des parcours, js/dashboard.js -->
+<div id="dashboard" hidden></div>
+
+<!-- Chargement d'un parcours : pastille si l'attente dure (même style que le passage 2D ↔ 3D) -->
+<div id="page-loader" class="page-loader" hidden>
+  <div class="map-crossfade-label" role="status">Chargement du parcours…</div>
+</div>
 
 <div class="stats-bar"></div>
 

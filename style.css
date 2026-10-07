@@ -872,32 +872,96 @@ header h1 .icon { color: var(--gt-primary); vertical-align: -3px; margin-right: 
 #climbs-reopen-btn .icon { display: block; }
 .col-toggle-btn .icon, .m3d-panel-toggle .icon { display: block; }
 
-/* ── Sélecteur de course (en-tête) ── */
-.course-picker { margin-left: auto; align-self: center; }
-.course-picker[hidden] { display: none; }
-.course-picker select {
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: #fff;
-  background: transparent;
-  border: 2px solid var(--gt-primary);
-  border-radius: var(--gt-radius);
-  padding: 5px 28px 5px 10px;
-  cursor: pointer;
-  appearance: none;
-  background-image: linear-gradient(45deg, transparent 50%, var(--gt-primary) 50%), linear-gradient(135deg, var(--gt-primary) 50%, transparent 50%);
-  background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
-  background-size: 5px 5px;
-  background-repeat: no-repeat;
+/* ── Retour à la page d'accueil (en-tête d'une course) ── */
+.back-link {
+  margin-left: auto; align-self: center; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap;
+  color: #fff; text-decoration: none; border: 2px solid var(--gt-primary); border-radius: var(--gt-radius);
+  padding: 5px 12px; transition: background var(--gt-ease), color var(--gt-ease);
 }
-.course-picker select option { color: var(--gt-text); background: #fff; text-transform: none; }
+.back-link:hover { background: var(--gt-primary); color: var(--gt-on-primary); }
+.back-link .icon { color: inherit; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (max-width: 768px) {
-  .course-picker { margin-left: 0; width: 100%; }
-  .course-picker select { width: 100%; }
+  .back-link { margin-left: 0; }
+}
+
+/* ── Chargement d'une page (choix d'une tuile, ouverture d'un parcours) : voile et pastille après 300 ms ── */
+.page-loader {
+  position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
+  background: rgba(244, 244, 244, 0); animation: page-loader-veil 200ms ease-out 300ms forwards;
+}
+.page-loader[hidden] { display: none; }
+@keyframes page-loader-veil { to { background: rgba(244, 244, 244, .7); } }
+
+/* ── Page d'accueil : tuiles des parcours, regroupées par organisation ── */
+body.dashboard-mode { height: auto; min-height: 100vh; overflow: auto; display: block; }
+body.dashboard-mode > header, body.dashboard-mode > .stats-bar, body.dashboard-mode > .mobile-nav,
+body.dashboard-mode > main.layout { display: none; }
+.dash-header { background: var(--gt-night); color: #fff; border-bottom: 4px solid var(--gt-primary); padding: 22px 24px 18px; }
+.dash-header h1 { display: flex; align-items: center; gap: 10px; font-size: 22px; letter-spacing: 1.5px; text-transform: uppercase; }
+.dash-header h1 .icon { color: var(--gt-primary); }
+.dash-header p { margin-top: 6px; font-size: 13px; color: var(--gt-primary); letter-spacing: .3px; }
+.dash-main { max-width: 1240px; margin: 0 auto; padding: 24px 24px 40px; }
+/* Ordinateur : les groupes se rangent côte à côte, chacun sur autant de colonnes que de parcours */
+@media (min-width: 769px) {
+  .dash-main { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-flow: row dense; gap: 32px 16px; }
+  .dash-group { grid-column: span min(var(--n), 4); }
+  .dash-group-title { min-height: 40px; }   /* titres sur une ou deux lignes : tuiles alignées */
+  .dash-group .dash-grid { grid-template-columns: repeat(min(var(--n), 4), minmax(0, 1fr)); }
+}
+@media (min-width: 769px) and (max-width: 1100px) {
+  .dash-main { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dash-group { grid-column: span min(var(--n), 3); }
+  .dash-group .dash-grid { grid-template-columns: repeat(min(var(--n), 3), minmax(0, 1fr)); }
+}
+.dash-group-title {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px; min-height: 34px;
+  font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gt-ink);
+}
+.dash-group-logo {
+  width: 34px; height: 34px; border-radius: 50%; background: #fff; box-shadow: var(--gt-shadow-card);
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.dash-group-logo svg { display: block; }
+.dash-group-count { white-space: nowrap; font-size: 11px; font-weight: 500; letter-spacing: .5px; text-transform: none; color: var(--gt-text-muted); }
+.dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+.dash-tile {
+  display: flex; flex-direction: column; background: var(--gt-surface); color: var(--gt-text); text-decoration: none;
+  border-radius: 6px; overflow: hidden; box-shadow: var(--gt-shadow-card);
+  transition: transform var(--gt-ease), box-shadow var(--gt-ease);
+}
+.dash-tile:hover, .dash-tile:focus-visible { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0, 0, 0, .18); outline: none; }
+.dash-tile:focus-visible { box-shadow: 0 0 0 3px var(--tile-primary, var(--gt-primary)); }
+.dash-tile-band {
+  height: 92px; display: flex; align-items: center; justify-content: center;
+  background: var(--tile-night, var(--gt-night)); border-bottom: 4px solid var(--tile-primary, var(--gt-primary));
+}
+.dash-tile-logo {
+  width: 64px; height: 64px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+  display: flex; align-items: center; justify-content: center;
+}
+.dash-tile-logo svg { display: block; }
+.dash-tile-logo .icon { color: var(--gt-ink); }
+.dash-tile-body { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px 16px; }
+/* Toutes les tuiles à la même hauteur : nom sur deux lignes réservées (coupé au-delà, complet au survol), ligne de
+   date toujours présente (vide si le départ n'est pas connu) */
+.dash-tile-name {
+  font-family: var(--tile-font, var(--gt-font)); font-size: 15px; font-weight: 700; line-height: 1.25; color: var(--gt-ink);
+  height: 2.5em; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
+.dash-tile-stats { display: flex; gap: 10px; font-size: 13px; }
+.dash-tile-stats span { color: var(--gt-text-muted); font-weight: 600; }
+.dash-tile-date { display: flex; align-items: center; gap: 5px; height: 15px; font-size: 11px; color: var(--gt-text-muted); }
+@media (max-width: 768px) {
+  .dash-header { padding: 18px 16px 14px; }
+  .dash-main { padding: 18px 16px 32px; }
+  .dash-group + .dash-group { margin-top: 26px; }
+  .dash-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .dash-tile-band { height: 76px; }
+  .dash-tile-logo { width: 52px; height: 52px; }
+  .dash-tile-body { padding: 10px 12px 12px; }
+  .dash-tile-name { font-size: 13px; }
 }
 
 /* ── Détail des ravitaillements (popup de la carte, barre du profil) ── */

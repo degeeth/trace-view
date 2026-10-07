@@ -17,7 +17,7 @@ Course de référence : **La Grande Ourthe 100km** (100,2 km, +3 408 m, 44 côte
 - **Tout est relié** : cliquer une côte la met en avant partout (en 3D, la caméra se place face à la pente) ;
   survoler le profil déplace un curseur sur la carte.
 - **Partage** : lien direct vers une côte (`#climb-12`), export GPX, mode intégrable (`?embed=1`).
-- **Plusieurs courses** : sélecteur dans l'en-tête dès qu'il y en a deux (`?course=<id>`).
+- **Plusieurs courses** : `index.html` sans paramètre est la page d'accueil, une tuile par parcours (logo et couleurs de l'organisation), regroupées par organisation ou par `group` ; une tuile ouvre `index.html?course=<id>`, le lien « Tous les parcours » y ramène.
 - **Mobile** : même page, onglets Carte / Côtes.
 
 Catégories de pente (moyenne de la côte) : 🟢 4–7 % · 🟠 7–10 % · 🔴 ≥ 10 % · ⚪ < 4 %.
@@ -96,6 +96,7 @@ courses/<id>/course.json + <fichier>.gpx ──► scripts/build_course.py <id> 
 | `branding` | identité visuelle, fichier `branding/<nom>.json` (couleurs du tracé, icône des ravitaillements) ; `defaut` si absent |
 | `aidStations` | ravitaillements : **km**, **coordonnées**, ou les deux (le script calcule ce qui manque) ; facultatifs : `supplies` (contenu, voir ci-dessous), `note` et `cutoff` (barrière horaire, `"11:15"` : le jour du départ, ou le lendemain si l'heure est avant le départ ; date complète pour une course de plusieurs jours). Le script calcule le temps de course et la vitesse moyenne minimale |
 | `detection` | facultatif : longueur minimale d'une côte (m), tolérance au bruit GPS (m), lissage (points) |
+| `group` | facultatif : nom du groupe de la course sur la page d'accueil (`"Haute Randonnée Pyrénéenne (HRP)"`) ; sinon l'organisation de son identité, ou « Autres parcours » pour l'identité par défaut |
 | `start` | facultatif : départ, `"2026-11-07T09:00"` ; nécessaire aux barrières horaires, affiché dans l'en-tête |
 | `finishCutoff` | facultatif : barrière horaire de l'arrivée (`"20:00"`, ou date complète `"2026-11-08T06:00"`) ; affichée comme temps limite |
 | `elevationFixes` | facultatif : altitudes fausses du GPX (paliers, sauts) interpolées entre deux km, `[{ "fromKm": 3.03, "toKm": 4.06 }]` ; le GPX n'est pas modifié |
@@ -238,7 +239,9 @@ utilisent l'altitude **lissée**. Si le D+ brut dépasse nettement le D+ annonc�
 index.html               balisage seul
 style.css                styles (jetons de DESIGN.md)
 js/
-  app.js                 point d'entrée : chargement, en-tête, sélection, partage, GPX, onglets mobiles
+  app.js                 point d'entrée : page d'accueil (sans paramètre) ou page d'une course (?course=)
+  dashboard.js           page d'accueil : tuiles des parcours, groupes, chargement
+  course.js              page d'une course : chargement, en-tête, sélection, partage, GPX, onglets mobiles
   race.js                chargement des données, pentes, couleurs des catégories
   map.js                 carte MapLibre 2D/3D : couches, panneau des fonds, curseur, surbrillance
   map-styles.js          fonds de carte
@@ -251,7 +254,8 @@ styles/topo-trail.json   ancien style « Topo trail » (déprécié, à supprime
 courses/<id>/            entrées : course.json + GPX
 branding/<nom>.json      identités visuelles (couleurs, icône des ravitaillements)
 data/<id>.json           données générées pour l'application
-data/courses.json        catalogue des courses (sélecteur)
+data/courses.json        catalogue des courses (tuiles de la page d'accueil : identité, groupe, départ)
+data/brandings.json      identités des courses du catalogue (logo, couleurs), écrit par build_course.py
 data/contours/<id>/      courbes de niveau générées
 scripts/
   build_course.py        GPX → données (Python standard)
@@ -290,7 +294,8 @@ npm run test:smoke -- --course <id>        # sur une course précise
 
 Le test de fumée utilise Chrome installé sur la machine (chemin macOS par défaut, sinon variable `CHROME_PATH`).
 Il vérifie notamment : tableau, modes du tracé, curseur, sélection et zoom du profil, 3D, changements de fond,
-lien partagé, sélecteur de course, cohérence du D+, affichage mobile, absence d'erreur JavaScript.
+lien partagé, page d'accueil (tuiles, ouverture d'un parcours) et lien de retour, cohérence du D+, affichage mobile,
+absence d'erreur JavaScript.
 
 ## Crédits et licences
 

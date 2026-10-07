@@ -981,3 +981,27 @@ README, skill
 - Chevauchements réglés sur le rendu réel : libellés d'un ravito trop proche masqués (point gardé, détail au
   survol ; départ et arrivée toujours affichés), texte d'un tronçon réduit au D+ puis masqué ; arrivée calée à
   droite, départ à gauche. Vérifié sans chevauchement sur 4 courses, ordinateur et mobile
+
+---
+
+## 53. Page d'accueil : tuiles des parcours
+
+**Fichiers** : `js/app.js`, `js/course.js` (ancien `app.js`), `js/dashboard.js`, `js/icons.js`, `index.html`,
+`style.css`, `scripts/build_course.py`, `data/courses.json`, `data/brandings.json`,
+`courses/hrp-10-lescun-etsaut/course.json`, `courses/hrp-11-etsaut-ayous/course.json`, `tests/smoke.mjs`,
+`README.md`, `.claude/skills/add-course/SKILL.md`
+
+- `index.html` sans paramètre : page d'accueil, une tuile par parcours (bandeau aux couleurs de l'organisation,
+  logo sur pastille blanche, distance, D+, date de départ si connue), regroupées par organisation (nom sans
+  précision entre parenthèses) ou par `group` (`course.json` ; HRP 10 et 11 : « Haute Randonnée Pyrénéenne ») ;
+  sur ordinateur, les groupes se rangent côte à côte, chacun sur autant de colonnes que de parcours
+- Tuiles toutes de la même hauteur : nom sur deux lignes réservées (coupé au-delà, complet au survol), ligne de
+  date toujours présente, vide si le départ n'est pas connu
+- Une tuile ouvre `index.html?course=<id>` ; pastille « Chargement de … » si l'attente dure (300 ms, même style que
+  le passage 2D ↔ 3D), puis sur la page du parcours jusqu'à ce que la carte soit chargée
+- Sélecteur de course retiré, remplacé par le lien « Tous les parcours » dans l'en-tête
+- `js/app.js` devient un aiguillage (accueil ou course, version `?v=` reprise pour le module chargé)
+- `build_course.py` : identité, groupe et départ dans `data/courses.json` ; `data/brandings.json` (logo et couleurs
+  des identités du catalogue)
+- Test de fumée : page d'accueil (une tuile par parcours, ouverture d'un parcours) et lien de retour ; sans
+  `--course`, la première course du catalogue

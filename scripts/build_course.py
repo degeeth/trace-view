@@ -503,6 +503,10 @@ def build(course_id, fill_elevation_opt=False):
     use_raw = elevation_source == 'GPX' and course.get('statsElevation', 'raw') != 'smoothed'
     shown = [p['ele'] for p in points] if use_raw else elev
     race_stats, catalog_stats = stats(points, shown)
+    # Page d'accueil (tuiles) : identité et groupe de la course ("group" dans course.json, sinon l'organisation)
+    catalog_stats['branding'] = course.get('branding', DEFAULT_BRANDING)
+    if course.get('group'):
+        catalog_stats['group'] = str(course['group']).strip()
     # Règle du projet (CLAUDE.md) : le tiret cadratin « — » ne doit jamais apparaître dans l'application
     if course.get('quality', 'standard') not in ('standard', 'high'):
         warnings.append(f'"quality" doit valoir "standard" ou "high" (reçu : {course["quality"]!r}), "standard" utilisé')
@@ -559,6 +563,8 @@ def build(course_id, fill_elevation_opt=False):
     }
     if contours:
         data['contours'] = contours
+    if 'start' in barriers:
+        catalog_stats['start'] = barriers['start']
     return data, catalog_stats, warnings
 
 
@@ -623,6 +629,15 @@ def update_catalog(course_id, name, catalog_stats):
     catalog.sort(key=lambda c: (-c['distanceKm'], c['name']))
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(catalog, f, ensure_ascii=False, indent=2)
+        f.write('\n')
+    # Identités des courses du catalogue (logo, couleurs) pour les tuiles de la page d'accueil
+    brandings = {}
+    for bid in sorted({c.get('branding', DEFAULT_BRANDING) for c in catalog}):
+        b = load_json(os.path.join(ROOT, 'branding', bid + '.json'))
+        b.setdefault('aidStationIcon', DEFAULT_AID_ICON)
+        brandings[bid] = {k: b[k] for k in ('name', 'traceColor', 'aidStationIcon', 'headerLogo', 'theme') if k in b}
+    with open(os.path.join(ROOT, 'data', 'brandings.json'), 'w', encoding='utf-8') as f:
+        json.dump(brandings, f, ensure_ascii=False, indent=2)
         f.write('\n')
 
 
