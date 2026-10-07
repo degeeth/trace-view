@@ -102,7 +102,7 @@ de l'application (Noto Sans) s'affichent partout.
 | `ign-ortho` | raster 256 | orthophotos IGN, sous les orthophotos SPW | qualité haute + fond Satellite, France (`data.geopf.fr`) |
 | `contours-thick` | geojson | courbes maîtresses (50 m) | `data/contours/<id>/thick.geojson` |
 | `contours-thin` | geojson | courbes intermédiaires (10 m) | `data/contours/<id>/thin.geojson`, chargées à partir de `thinContoursLoadZoom` (12,5) |
-| `trace` | geojson, `lineMetrics: true` | tracé complet (LineString, 3 coordonnées) | `data/<id>.json` |
+| `trace` | geojson | tracé découpé en tronçons de même couleur (`color`, mode Pente) et de même facteur de largeur (`w`, versants raides en 3D) | `data/<id>.json` |
 | `climbs` | geojson | segments des côtes colorées (hors < 4 %) | idem |
 | `climb-hl` | geojson | côte sélectionnée | idem, mise à jour à la sélection |
 | `arrows` | geojson | flèches de direction, une par km, avec un niveau de densité (`tier`) | calculé dans `map.js` |
@@ -144,7 +144,7 @@ au-dessus de tout le fond.
 | 6 | *libellés du fond* | symbol | | noms de lieux, routes, sommets (sommets à partir de `peaksMinZoom`, voir section 12) |
 | 7 | `trace-glow` | line | | halo flou du tracé (noir, ou blanc sur fond sombre) |
 | 8 | `trace-outline` | line | | contour net du tracé |
-| 9 | `trace-line` | line | | trait du tracé : couleur de la course, ou `line-gradient` par pente en mode Pente |
+| 9 | `trace-line` | line | | trait du tracé : couleur de la course, ou couleur de pente de chaque tronçon (`color`) en mode Pente |
 | 10 | `climbs-line` | line | | côtes colorées par catégorie (mode Côtes) |
 | 11 | `climb-hl-outline` | line | | contour blanc de la côte sélectionnée |
 | 12 | `climb-hl-line` | line | | côte sélectionnée |
@@ -280,7 +280,8 @@ sequenceDiagram
 | Courbes fines chargées seulement au zoom ≥ `thinContoursLoadZoom` (12,5) | ~1 à 2 Mo évités tant qu'on ne zoome pas |
 | Coordonnées des courbes arrondies à 5 décimales (≈ 1 m) | fichiers divisés par 2 environ ; zone limitée au parcours + 2 km |
 | Courbes maîtresses absentes du fichier des courbes fines | pas de double dessin |
-| Dégradé de pente en `step` sur `line-progress`, un arrêt par changement de couleur | ~230 arrêts au lieu d'un par point |
+| Tracé en tronçons : un tronçon par changement de couleur (mode Pente) ou de facteur de largeur (arrondi à 0,1) | ~230 tronçons au lieu d'un par point |
+| Pente du relief en travers du tracé mesurée 250 ms après un mouvement ou une tuile de relief, seulement pour les points visibles et quand le zoom augmente | pas de calcul à chaque image |
 | `DEM` en `tileSize: 256` (taille réelle des tuiles Terrarium) | relief à la bonne résolution (512 chargeait un zoom trop bas) |
 | Orthophotos SPW demandées en 512 px pour des tuiles 256 | net sur écran Retina |
 | Libellés et pastilles en couches `symbol`/`circle` (GPU) plutôt qu'en marqueurs DOM | fluide malgré des centaines d'éléments |
@@ -311,6 +312,11 @@ dans `MAP_STYLES`).
 |---|---|---|
 | `defaultStyle` | `'sentiers'` | fond de carte au chargement (clé de `MAP_STYLES`) ; repli sur le premier fond si la clé n'existe pas |
 | `stylePanelCollapsed` | `true` | panneau « Fond de carte » replié au démarrage |
+| `traceWidth` | 1 | épaisseur du tracé : facteur appliqué à toutes ses couches (`trace-glow`, `trace-outline`, `trace-line`, `climbs-line`, `climb-hl-*`) ; une course peut le remplacer par `"traceWidth"` dans `course.json` (0,3 à 3) |
+| `traceWidth3D` | 0,7 | facteur supplémentaire en 3D, appliqué au passage en 3D (sous l'image figée du fondu) et retiré en 2D : plaqué sur le relief, le tracé s'élargit sur les versants face à la caméra et empâte les lacets |
+| `climbHighlightWidth3D` | 0,72 | surbrillance de la côte sélectionnée en 3D, resserrée (≈ 1,3 fois le tracé au lieu de 1,8) ; en 3D, toutes les épaisseurs sont aussi plafonnées à leur valeur du zoom 12, la perspective grossissant déjà le premier plan |
+| `steepSlopeCompensation` / `steepMinWidth` / `steepSampleDistance` | `true` / 0,35 / 15 m | 3D : largeur du tracé multipliée par le cosinus de la pente du relief en travers (mesurée par `queryTerrainElevation` à 15 m de part et d'autre), au moins 0,35. Sur une paroi, le trait plaqué sur le relief s'étalait de 3 à 4 fois (HRP 11, Chemin de la Mâture, pentes de 55 à 77°) |
+| `traceGlowOpacity3D` | 0,35 | opacité du halo sombre du tracé en 3D (0,6 en 2D) |
 | `peaksMinZoom` | 15 | sommets (icône, nom, altitude) : appliqué à chaque `style.load` à toutes les couches `mountain_peak` (`setLayerZoomRange`) ; Streets, Light et Dark n'en affichent pas, les fonds raster ne sont pas concernés |
 | `contoursMinZoom.thick` / `.thin` / `.labels` | 11 / 13 / 14 | apparition des courbes maîtresses, intermédiaires et des altitudes ; fondu sur 2 et 1,5 niveaux de zoom |
 | `thinContoursLoadZoom` | 12,5 | téléchargement des courbes intermédiaires (≈ 1 à 2 Mo) pas avant ce zoom |

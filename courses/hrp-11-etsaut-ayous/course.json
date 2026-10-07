@@ -5,6 +5,11 @@
   "gpx": "HRP-11-Etsaut-Ayous.gpx",
   "branding": "defaut",
   "quality": "high",
+  "terrainExaggeration": 1,
+  "elevationFixes": [
+    { "fromKm": 3.03, "toKm": 4.06 },
+    { "fromKm": 13.223, "toKm": 13.556 }
+  ],
   "aidStations": [
     {
       "name": "Refuge d'Ayous",

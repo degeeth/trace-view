@@ -88,7 +88,26 @@ courses/<id>/
 ```
 
 (`"fillElevation": true` and `"quality": "high"` only if the user agreed, see above; add `"terrainExaggeration": 2.5`
-for gentle relief.)
+for gentle relief. Optional `"traceWidth"` (0.3 to 3) overrides the trace thickness factor of `js/config.js` for
+this course, only on request.)
+
+### Suspicious elevations
+
+The script flags physically impossible elevations (*Altitudes suspectes km X à Y*): a jump steeper than 100 %
+over at least 30 m of height, often between perfectly flat sections (Strava routes along cliffs, GPS glitches in
+a recording). **The person importing the course decides**; never add a fix on your own:
+0. before proposing, compare the zone with the terrain model when `rasterio` is available (sample Copernicus
+   GLO-30 along the track, as `build_course.copernicus_tile_url` does) and adjust the km bounds to where the GPX
+   and the terrain agree again: the detected zone only covers the jump and flat sections, the error can start
+   earlier (Ohm Trail: from km 0.89, detected at 1.11) and a flat section can be a real summit to keep
+   (HRP 11: col d'Ayous at km 13.22);
+1. show them each zone: km range, elevations before and after, size of the jump, what it does to the profile
+   (a false wall, wrong maximum slope of the climb) and, if relevant, to the elevation gain;
+2. explain the fix: elevations interpolated in a straight line between the two km given in the warning, GPX
+   file unchanged, reversible by removing the line;
+3. ask, for each zone, whether to fix it. Only if they accept, add the zone to
+   `"elevationFixes": [{ "fromKm": …, "toKm": … }]` in `course.json` and rebuild. If they refuse (a real
+   ladder, via ferrata…), leave it: the warning will remain on every build and is then explained.
 
 Aid stations: `supplies` (optional) = array of `{ "category", "label", "brand" }` items. `category` is one of
 `liquide`, `solide`, `chaud`, `autre` (these values are part of the data format and stay in French); `label` =
@@ -127,6 +146,7 @@ Handle **every** `⚠` line:
 - *km annoncé X mais les coordonnées tombent au km Y* (km and coordinates disagree) → ask which one is right, fix `course.json`
 - *à N m du tracé* (N m away from the track) → coordinates probably wrong (or an aid station deliberately off the route: keep it if confirmed)
 - *hors du parcours* (outside the course) → km greater than the total distance
+- *Altitudes suspectes km X à Y* (suspicious elevations) → see « Suspicious elevations » above: ask the user, fix only with their consent
 - *N point(s) n'ont pas d'altitude* (points without elevation) → the GPX has no elevations: go back to « GPX without elevations » and ask
 
 Then run the command again until no unexplained warning remains.

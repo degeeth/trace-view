@@ -9,6 +9,18 @@ export const MAP_CONFIG = {
   defaultStyle: 'sentiers',          // fond de carte au chargement (clé de MAP_STYLES, js/map-styles.js)
   stylePanelCollapsed: true,         // panneau « Fond de carte » replié
 
+  // ── Tracé ──
+  traceWidth: 1,                     // épaisseur du tracé : facteur appliqué à toutes ses couches (halo, contour,
+                                     // trait, côtes colorées, côte sélectionnée) ; 0.8 = plus fin, 1.3 = plus épais
+  traceWidth3D: 0.7,                 // facteur supplémentaire en 3D : le tracé plaqué sur le relief s'élargit sur les
+                                     // versants face à la caméra et empâte les lacets en montagne
+  climbHighlightWidth3D: 0.72,       // côte sélectionnée en 3D : surbrillance resserrée (≈ 1,3 fois le tracé au lieu de 1,8)
+  traceGlowOpacity3D: 0.35,
+  steepSlopeCompensation: true,      // 3D : tracé aminci là où le relief est raide en travers (paroi, falaise), où le
+                                     // trait plaqué sur le relief s'étale ; largeur × cosinus de la pente
+  steepMinWidth: 0.35,               // amincissement maximal (facteur minimal, atteint vers 70°)
+  steepSampleDistance: 15,           // distance (m) de part et d'autre du tracé pour mesurer la pente du relief          // opacité du halo sombre du tracé en 3D (0.6 en 2D) : moins de masse sur le relief
+
   // ── Apparition selon le zoom ──
   peaksMinZoom: 15,                  // sommets (icône, nom, altitude), sur tous les fonds vectoriels
   contoursMinZoom: {

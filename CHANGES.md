@@ -862,3 +862,76 @@ README, skill
   Montserrat et Open Sans
 - `style.css` : boutons à contour (Tout, GPX, Partager, 3D) écrits à l'encre (`--gt-ink`) et non plus en
   `--gt-on-primary`, qui n'est lisible que sur l'accent (texte blanc invisible sur fond blanc avec l'identité Ohm)
+
+---
+
+## 47. Épaisseur du tracé réglable, plus fine en 3D
+
+**Fichiers** : `js/config.js`, `js/map.js`, `scripts/build_course.py`, `courses/ohm-trail-2018/course.json`,
+`data/ohm-trail-2018.json`, `.claude/skills/add-course/SKILL.md`, `docs/CARTOGRAPHIE.md`, `index.html`
+
+- `traceWidth` (`js/config.js`, 1 par défaut) : facteur appliqué à toutes les couches du tracé (halo, contour,
+  trait, côtes colorées, côte sélectionnée) en gardant leurs proportions ; une course peut le remplacer par
+  `"traceWidth"` dans `course.json` (0,3 à 3, vérifié par `build_course.py`). Ohm Trail 2018 : ×0,6
+- `traceWidth3D` (0,7) : tracé plus fin en 3D. Plaqué sur le relief, il s'élargissait sur les versants face à la
+  caméra et les lacets de montagne se fondaient en une tache (≈ 30 à 50 m de large au zoom 13,5) ; ×0,5 était trop
+  fin (rouge dominé par le contour, flèches plus grosses que le trait)
+- `traceGlowOpacity3D` (0,35) : halo sombre allégé en 3D
+- En 3D, épaisseurs plafonnées à leur valeur du zoom 12 et surbrillance de côte resserrée
+  (`climbHighlightWidth3D`, 0,72) : en zoomant sur une côte (HRP 11, gorge de la côte 2), la perspective et le
+  versant face à la caméra grossissaient la surbrillance (1,8 fois le tracé) en un ruban rouge très épais
+- Bascule en fondu : l'épaisseur change sous l'image figée, invisible ; la 2D garde son épaisseur
+
+---
+
+## 48. HRP 11 : altitudes corrigées, tracé aminci sur les parois en 3D
+
+**Fichiers** : `scripts/build_course.py`, `tests/test_build_course.py`, `courses/hrp-11-etsaut-ayous/course.json`,
+`data/hrp-11-etsaut-ayous.json`, `js/map.js`, `js/config.js`, `tests/smoke.mjs`, `README.md`,
+`docs/CARTOGRAPHIE.md`, `.claude/skills/add-course/SKILL.md`, `index.html`
+
+- `"elevationFixes"` (`course.json`) : altitudes interpolées entre deux km, signalées dans le résumé de
+  `build_course.py` et dans `race.elevationFixes`. HRP 11 : le GPX Strava avait des paliers (755 m puis 1 053 m)
+  et un saut de +298 m en 80 m sur le Chemin de la Mâture ; km 3,02 à 4,07 interpolés de 753 à 1 066 m. D+ et
+  côtes inchangés, profil sans faux mur. 2 tests unitaires
+- HRP 11 : relief 3D ×1 (`terrainExaggeration`), falaises moins accentuées
+- 3D : tracé aminci sur les versants raides. La pente du relief en travers du tracé est mesurée
+  (`queryTerrainElevation` à 15 m de part et d'autre) et la largeur multipliée par son cosinus (au moins 0,35) :
+  sur la paroi du Chemin de la Mâture (55 à 77°), le trait plaqué sur le relief ne s'étale plus en ruban.
+  Réglages `steepSlopeCompensation`, `steepMinWidth`, `steepSampleDistance`
+- Tracé, côtes colorées et côte sélectionnée découpés en tronçons (couleur, facteur de largeur `w`) : le mode
+  Pente passe d'un `line-gradient` à une couleur par tronçon (même rendu) ; test de fumée adapté
+
+---
+
+## 49. Détection des altitudes suspectes du GPX
+
+**Fichiers** : `scripts/build_course.py`, `tests/test_build_course.py`, `.claude/skills/add-course/SKILL.md`
+
+- `build_course.py` signale (`⚠ Altitudes suspectes km X à Y`) les sauts physiquement impossibles : plus de
+  100 % de pente sur au moins 30 m de dénivelé (fenêtre de 100 m), zone étendue aux paliers parfaitement plats
+  qui l'entourent. L'avertissement donne la ligne `"elevationFixes"` à ajouter ; une zone corrigée n'est plus
+  signalée
+- Skill `add-course` : la correction est toujours le choix de la personne qui importe la course (zone, effet sur
+  le profil, explication, accord zone par zone ; refus possible, l'avertissement reste alors expliqué)
+- Courses existantes : rien sur La Grande Ourthe, OSO, GTLC 65, HRP 10. Corrigées avec accord, bornes ajustées
+  en comparant au modèle Copernicus : HRP 11 km 13,22 à 13,56 (palier puis −73 m ; le col d'Ayous à 2 175 m est
+  gardé, descente progressive comme sur le relief) ; Ohm Trail km 0,89 à 1,51 (erreur de l'enregistrement
+  jusqu'à +45 m, détectée seulement au saut du km 1,11 ; D+ +2 017 → +1 986 m). Extratrail Stoumont : km 13,59 à
+  13,65 signalé (34 m en 20 m sur les altitudes Copernicus récupérées) : laissé tel quel (invisible, D+ calculé
+  sur l'altitude lissée), l'avertissement restant est expliqué
+- `apply_elevation_fixes` : tolérance de 0,5 m sur les bornes (un km arrondi désignait le point précédent)
+- 2 tests unitaires
+
+---
+
+## 50. Course : Extratrail Malmedy 19 km (bleu)
+
+**Fichiers** : `courses/extratrail-malmedy-19/` (`course.json`, `extratrail_malmedy_bleu.gpx`),
+`data/extratrail-malmedy-19.json`, `data/courses.json`, `data/contours/extratrail-malmedy-19/`
+
+- Trace SityTrail : boucle de 18,8 km au départ de Malmedy, 686 points, aucune altitude suspecte
+- D+ sur l'altitude lissée (`statsElevation: "smoothed"`) : +518 m, l'organisation annonce 470 m pour 18 km ;
+  l'altitude brute (+740 m) est bruitée
+- 6 côtes ≥ 300 m (rouge 1, orange 1, vert 2, < 4 % 2), dont 0,51 à 1,82 km : +165 m à 12,6 %
+- Identité Extratrail (comme Stoumont), relief 3D ×2,5, qualité standard, courbes de niveau, sans ravitaillement

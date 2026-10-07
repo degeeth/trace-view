@@ -48,6 +48,33 @@ export function createMap(race, { container }) {
   const colored = race.climbs.filter(c => c.cat !== 'blanc');
 
   const C = MAP_CONFIG;
+  // Épaisseurs du tracé par couche (zoom, largeur, zoom, largeur…), multipliées par traceWidth (celui de la
+  // course, course.json, sinon js/config.js) et en 3D par traceWidth3D : le tracé plaqué sur le relief s'élargit
+  // sur les versants face à la caméra et empâte les lacets
+  const TRACE_WIDTHS = {
+    'trace-glow': [8, 7, 12, 9, 16, 12],
+    'trace-outline': [8, 3.5, 12, 5, 16, 7],
+    'trace-line': [8, 2, 12, 3, 16, 4.5],
+    'climbs-line': [8, 2.5, 12, 3.5, 16, 5.5],
+    'climb-hl-outline': [8, 6, 12, 9, 16, 13],
+    'climb-hl-line': [8, 3.5, 12, 5.5, 16, 8]
+  };
+  const baseWidth = race.race.traceWidth ?? C.traceWidth ?? 1;
+  const traceWidth = id => {
+    // En 3D : épaisseurs plafonnées à leur valeur du zoom 12 (la perspective grossit déjà le tracé au premier
+    // plan) et surbrillance de côte resserrée (climbHighlightWidth3D)
+    const stops = is3D ? TRACE_WIDTHS[id].slice(0, 4) : TRACE_WIDTHS[id];
+    const factor = baseWidth * (is3D ? (C.traceWidth3D ?? 1) * (id.startsWith('climb-hl') ? C.climbHighlightWidth3D ?? 1 : 1) : 1);
+    // ['get', 'w'] : facteur du tronçon (amincissement sur les versants raides en 3D, voir plus bas)
+    return zoomWidth(...stops.map((v, i) => i % 2 ? ['*', v * factor, ['coalesce', ['get', 'w'], 1]] : v));
+  };
+  const glowOpacity = () => is3D ? C.traceGlowOpacity3D ?? 0.6 : 0.6;
+  function applyTraceWidths() {
+    for (const id of Object.keys(TRACE_WIDTHS)) if (map.getLayer(id)) map.setPaintProperty(id, 'line-width', traceWidth(id));
+    if (map.getLayer('trace-glow')) map.setPaintProperty('trace-glow', 'line-opacity', glowOpacity());
+    refreshTraceData();
+    scheduleSteep();
+  }
   let styleKey = MAP_STYLES[C.defaultStyle] ? C.defaultStyle : Object.keys(MAP_STYLES)[0];
   let is3D = false;
   let traceMode = 'ravitaillements';
@@ -55,7 +82,6 @@ export function createMap(race, { container }) {
   let cursorMarker = null;
   let highlightMarkers = [];
   const contourCache = { thick: null, thin: null };
-  let slopeGradient = null;
 
   const map = new maplibregl.Map({
     container,
@@ -81,16 +107,75 @@ export function createMap(race, { container }) {
   });
 
   // ── Données GeoJSON dérivées de la course ──
-  const traceGeo = { type: 'Feature', geometry: { type: 'LineString', coordinates: race.lngLat } };
+  // Tracé, côtes et côte sélectionnée découpés en tronçons de même couleur (pente en mode Pente, catégorie des
+  // côtes) et de même facteur de largeur `w`. Plaqué sur le relief en 3D, un trait s'étale sur une paroi (×3 à 4 à
+  // 70°) : sa largeur y est multipliée par le cosinus de la pente du relief en travers du tracé (au moins
+  // steepMinWidth), mesurée sur le relief affiché (exagération comprise) à mesure que les tuiles arrivent.
+  const nPts = race.lngLat.length;
+  const steep = new Float32Array(nPts).fill(1);        // facteur de largeur par point
+  const steepZoom = new Float32Array(nPts).fill(-1);   // zoom de la mesure (-1 : pas encore mesuré)
+  let steepExag = null;
+  const widthAt = i => is3D && C.steepSlopeCompensation
+    ? Math.round(Math.min(steep[i], steep[Math.min(i + 1, nPts - 1)]) * 10) / 10 : 1;
 
-  const climbsGeo = {
-    type: 'FeatureCollection',
-    features: colored.map(c => ({
-      type: 'Feature',
-      properties: { color: CAT_COLORS[c.cat] },
-      geometry: { type: 'LineString', coordinates: race.lngLat.slice(c.startIdx, c.endIdx + 1) }
-    }))
-  };
+  // Tronçon i = du point i au point i + 1
+  function segments(start, end, colorAt) {
+    const props = i => ({ w: widthAt(i), ...(colorAt ? { color: colorAt(i) } : {}) });
+    const features = [];
+    let from = start, cur = props(start);
+    for (let i = start + 1; i <= end; i++) {
+      const next = i < end ? props(i) : null;
+      if (!next || next.w !== cur.w || next.color !== cur.color) {
+        features.push({ type: 'Feature', properties: cur,
+          geometry: { type: 'LineString', coordinates: race.lngLat.slice(from, i + 1) } });
+        from = i;
+        cur = next;
+      }
+    }
+    return { type: 'FeatureCollection', features };
+  }
+  const traceData = () => segments(0, nPts - 1, traceMode === 'slope' ? i => slopeColor(race.slope[i]) : null);
+  const climbsData = () => ({ type: 'FeatureCollection',
+    features: colored.flatMap(c => segments(c.startIdx, c.endIdx, () => CAT_COLORS[c.cat]).features) });
+  const highlightData = () => selected ? segments(selected.startIdx, selected.endIdx, null) : EMPTY;
+  function refreshTraceData() {
+    map.getSource('trace')?.setData(traceData());
+    map.getSource('climbs')?.setData(climbsData());
+    map.getSource('climb-hl')?.setData(highlightData());
+  }
+
+  // Pente du relief en travers du tracé, de part et d'autre de chaque point (steepSampleDistance) ; remesurée quand
+  // on zoome (tuiles de relief plus fines) pour les points visibles
+  function measureSteep() {
+    if (!is3D || !C.steepSlopeCompensation || !map.getTerrain()) return;
+    const exag = map.getTerrain().exaggeration;
+    if (exag !== steepExag) { steepZoom.fill(-1); steepExag = exag; }
+    const zoom = Math.floor(map.getZoom()), bounds = map.getBounds(), d = C.steepSampleDistance;
+    let changed = false;
+    for (let i = 0; i < nPts; i++) {
+      if (steepZoom[i] >= zoom) continue;
+      const [lng, lat] = race.lngLat[i];
+      if (steepZoom[i] >= 0 && !bounds.contains([lng, lat])) continue;
+      const a = race.lngLat[Math.max(0, i - 1)], b = race.lngLat[Math.min(nPts - 1, i + 1)];
+      const kx = 111320 * Math.cos(lat * Math.PI / 180), ky = 110540;
+      const dx = (b[0] - a[0]) * kx, dy = (b[1] - a[1]) * ky, len = Math.hypot(dx, dy) || 1;
+      const ox = -dy / len * d / kx, oy = dx / len * d / ky;   // perpendiculaire au tracé, en degrés
+      const left = map.queryTerrainElevation([lng + ox, lat + oy]);
+      const right = map.queryTerrainElevation([lng - ox, lat - oy]);
+      if (left == null || right == null) continue;
+      const f = Math.max(C.steepMinWidth, Math.cos(Math.atan(Math.abs(left - right) / (2 * d))));
+      if (Math.abs(f - steep[i]) >= 0.05) changed = true;
+      steep[i] = f;
+      steepZoom[i] = zoom;
+    }
+    if (changed) refreshTraceData();
+  }
+  // Mesure différée (250 ms) après chaque mouvement et chaque tuile de relief reçue ; pas sur « idle », qui peut
+  // ne jamais venir tant que des tuiles se chargent en 3D
+  let steepTimer = null;
+  const scheduleSteep = () => { clearTimeout(steepTimer); steepTimer = setTimeout(measureSteep, 250); };
+  map.on('moveend', scheduleSteep);
+  map.on('sourcedata', e => { if (e.sourceId === 'dem' && e.tile) scheduleSteep(); });
   const badgesGeo = {
     type: 'FeatureCollection',
     features: colored.map(c => ({
@@ -259,26 +344,26 @@ export function createMap(race, { container }) {
     if (styleKey === 'satellite' && !C.satelliteHillshade) map.setLayoutProperty('terrain-hillshade', 'visibility', 'none');
     if (style.contours && race.contours) addContours(beforeLabels);
 
-    map.addSource('trace', { type: 'geojson', data: traceGeo, lineMetrics: true });
+    map.addSource('trace', { type: 'geojson', data: traceData() });
     const lineLayout = { 'line-cap': 'round', 'line-join': 'round' };
     map.addLayer({ id: 'trace-glow', type: 'line', source: 'trace', layout: lineLayout,
-      paint: { 'line-color': outline, 'line-width': zoomWidth(8, 7, 12, 9, 16, 12), 'line-opacity': 0.6, 'line-blur': 3 } });
+      paint: { 'line-color': outline, 'line-width': traceWidth('trace-glow'), 'line-opacity': glowOpacity(), 'line-blur': 3 } });
     map.addLayer({ id: 'trace-outline', type: 'line', source: 'trace', layout: lineLayout,
-      paint: { 'line-color': outline, 'line-width': zoomWidth(8, 3.5, 12, 5, 16, 7) } });
+      paint: { 'line-color': outline, 'line-width': traceWidth('trace-outline') } });
     map.addLayer({ id: 'trace-line', type: 'line', source: 'trace', layout: lineLayout,
-      paint: { 'line-color': traceColor, 'line-width': zoomWidth(8, 2, 12, 3, 16, 4.5) } });
+      paint: { 'line-color': ['coalesce', ['get', 'color'], traceColor], 'line-width': traceWidth('trace-line') } });
 
     // Côtes colorées par catégorie (mode « Côtes »)
-    map.addSource('climbs', { type: 'geojson', data: climbsGeo });
+    map.addSource('climbs', { type: 'geojson', data: climbsData() });
     map.addLayer({ id: 'climbs-line', type: 'line', source: 'climbs', layout: lineLayout,
-      paint: { 'line-color': ['get', 'color'], 'line-width': zoomWidth(8, 2.5, 12, 3.5, 16, 5.5) } });
+      paint: { 'line-color': ['get', 'color'], 'line-width': traceWidth('climbs-line') } });
 
     // Côte sélectionnée
     map.addSource('climb-hl', { type: 'geojson', data: EMPTY });
     map.addLayer({ id: 'climb-hl-outline', type: 'line', source: 'climb-hl', layout: lineLayout,
-      paint: { 'line-color': '#fff', 'line-width': zoomWidth(8, 6, 12, 9, 16, 13) } });
+      paint: { 'line-color': '#fff', 'line-width': traceWidth('climb-hl-outline') } });
     map.addLayer({ id: 'climb-hl-line', type: 'line', source: 'climb-hl', layout: lineLayout,
-      paint: { 'line-color': '#e74c3c', 'line-width': zoomWidth(8, 3.5, 12, 5.5, 16, 8) } });
+      paint: { 'line-color': '#e74c3c', 'line-width': traceWidth('climb-hl-line') } });
 
     map.addSource('arrows', { type: 'geojson', data: arrowsGeo });
     map.addLayer({
@@ -377,27 +462,9 @@ export function createMap(race, { container }) {
   map.on('zoomend', () => { if (map.getSource('contours-thin')) loadThinContours(); });
 
   // ── Mode du tracé ──
-  function buildSlopeGradient() {
-    if (slopeGradient) return slopeGradient;
-    // step sur line-progress : un arrêt seulement quand la couleur change
-    const expr = ['step', ['line-progress'], slopeColor(race.slope[0])];
-    let prev = expr[2];
-    for (let i = 1; i < race.points.length - 1; i++) {
-      const color = slopeColor(race.slope[i]);
-      if (color === prev) continue;
-      const progress = race.dist[i] / race.totalKm;
-      // arrêts strictement croissants : à distance égale, on remplace la couleur
-      if (expr.length > 3 && progress <= expr[expr.length - 2]) expr[expr.length - 1] = color;
-      else expr.push(progress, color);
-      prev = color;
-    }
-    slopeGradient = expr;
-    return expr;
-  }
-
   function applyTraceMode() {
     if (!map.getLayer('trace-line')) return;
-    map.setPaintProperty('trace-line', 'line-gradient', traceMode === 'slope' ? buildSlopeGradient() : undefined);
+    map.getSource('trace').setData(traceData());   // mode Pente : un tronçon par changement de couleur
     const vis = traceMode === 'climbs' ? 'visible' : 'none';
     ['climbs-line', 'badges-circle', 'badges-text'].forEach(id => map.setLayoutProperty(id, 'visibility', vis));
     refreshPanel();
@@ -414,7 +481,7 @@ export function createMap(race, { container }) {
     const src = map.getSource('climb-hl');
     if (!selected) { src?.setData(EMPTY); return; }
     const coords = race.lngLat.slice(selected.startIdx, selected.endIdx + 1);
-    src?.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: coords } });
+    src?.setData(highlightData());
     const label = race.climbLabel(selected);
     highlightMarkers = [
       addDot(race.lngLat[selected.startIdx], dotHtml('S', '#e74c3c'), `<b>${label}</b><br>Départ côte`),
@@ -561,6 +628,7 @@ export function createMap(race, { container }) {
     if (C.mode3DTransition === 'fade') {
       return crossfade(() => {
         cancelAnimationFrame(exaggerationFrame);
+        applyTraceWidths();   // sous l'image figée : le changement d'épaisseur ne se voit pas
         if (enabled) {
           currentExaggeration = terrainExaggeration();
           if (map.getSource('dem')) map.setTerrain({ source: 'dem', exaggeration: currentExaggeration });
@@ -573,6 +641,7 @@ export function createMap(race, { container }) {
         }
       }, enabled ? 'Passage en 3D…' : 'Retour en 2D…');
     }
+    applyTraceWidths();
     if (enabled) {
       const duration = selected ? C.animationDuration.climb3D : C.animationDuration.enter3D;
       animateExaggeration(terrainExaggeration(), duration);

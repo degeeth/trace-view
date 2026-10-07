@@ -53,6 +53,11 @@ DEFAULT_AID_ICON = {
     'path': 'M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2 M7 2v20 M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7',
 }
 ELEVATION_CACHE = 'elevation-cache.json'
+# Altitudes suspectes (saut impossible) : au moins JUMP_MIN_RISE m de dénivelé à plus de 100 % de pente sur au
+# plus JUMP_WINDOW m ; un palier parfaitement plat (PLATEAU_MIN m) collé au saut est inclus dans la zone
+JUMP_MIN_RISE = 30
+JUMP_WINDOW = 100
+PLATEAU_MIN = 200
 
 
 # ── Géométrie ───────────────────────────────────────────────────────────
@@ -147,6 +152,84 @@ def fill_elevation(course_dir, gpx_name, points, spacing=ELEVATION_SPACING):
         json.dump({'source': 'Copernicus GLO-30', 'gpxSha1': digest, 'spacing': spacing,
                    'points': [[round(p['lat'], 6), round(p['lon'], 6), p['ele']] for p in dense]}, f)
     return dense
+
+
+def apply_elevation_fixes(points, fixes, warnings):
+    """Altitudes fausses du GPX (paliers, sauts) : interpolées linéairement entre deux km.
+
+    fixes = [{"fromKm": 3.03, "toKm": 4.06}, …] (course.json, "elevationFixes"). Les points strictement entre le
+    dernier point avant fromKm et le premier point après toKm prennent l'altitude interpolée selon la distance.
+    Renvoie la liste des corrections appliquées (km, nombre de points) pour le résumé.
+    """
+    applied = []
+    total_km = points[-1]['dist'] / 1000
+    for fx in fixes if isinstance(fixes, list) else []:
+        a, b = (fx.get('fromKm'), fx.get('toKm')) if isinstance(fx, dict) else (None, None)
+        if not all(isinstance(v, (int, float)) for v in (a, b)) or not 0 <= a < b <= total_km:
+            warnings.append(f'"elevationFixes" : {fx!r} ignoré (attendu {{"fromKm": …, "toKm": …}}, '
+                            f'0 ≤ fromKm < toKm ≤ {total_km:.2f})')
+            continue
+        # Tolérance de 0,5 m : un km arrondi au mètre (proposé par detect_elevation_anomalies) désigne bien son point
+        i0 = max(i for i, p in enumerate(points) if p['dist'] / 1000 <= a + 0.0005)
+        i1 = min(i for i, p in enumerate(points) if p['dist'] / 1000 >= b - 0.0005)
+        e0, e1 = points[i0]['ele'], points[i1]['ele']
+        d0, d1 = points[i0]['dist'], points[i1]['dist']
+        for i in range(i0 + 1, i1):
+            points[i]['ele'] = e0 + (e1 - e0) * (points[i]['dist'] - d0) / (d1 - d0)
+        applied.append({'fromKm': round(d0 / 1000, 2), 'toKm': round(d1 / 1000, 2), 'points': i1 - i0 - 1,
+                        'fromEle': round(e0), 'toEle': round(e1)})
+    return applied
+
+
+def detect_elevation_anomalies(points):
+    """Zones où l'altitude du GPX est physiquement impossible : saut de plus de 100 % de pente (≥ 30 m de dénivelé
+    en 100 m au plus), souvent entouré de paliers parfaitement plats (itinéraire Strava le long d'une falaise).
+
+    Renvoie [{fromKm, toKm, fromEle, toEle, rise, over}] : fromKm / toKm = derniers points fiables avant et après la
+    zone, à proposer tels quels dans "elevationFixes" (la correction reste le choix de l'utilisateur).
+    """
+    n = len(points)
+    flagged = [False] * n
+    jumps = {}
+    for i in range(n):
+        j = i + 1
+        while j < n and points[j]['dist'] - points[i]['dist'] <= JUMP_WINDOW:
+            rise = points[j]['ele'] - points[i]['ele']
+            run = max(points[j]['dist'] - points[i]['dist'], 1.0)
+            if abs(rise) >= JUMP_MIN_RISE and abs(rise) > run:
+                for k in range(i, j + 1):
+                    flagged[k] = True
+                jumps[i] = max(jumps.get(i, (0, 0)), (abs(rise), run))
+            j += 1
+
+    def plateau(k, step):
+        """Étend k le long d'un palier (altitude identique) s'il fait au moins PLATEAU_MIN m."""
+        e, m = points[k]['ele'], k
+        while 0 <= m + step < n and abs(points[m + step]['ele'] - e) < 0.05:
+            m += step
+        return m if abs(points[m]['dist'] - points[k]['dist']) >= PLATEAU_MIN else k
+
+    zones, i = [], 0
+    while i < n:
+        if not flagged[i]:
+            i += 1
+            continue
+        j = i
+        while j + 1 < n and flagged[j + 1]:
+            j += 1
+        a, b = plateau(i, -1), plateau(j, +1)
+        a, b = max(a - 1, 0), min(b + 1, n - 1)   # derniers points fiables de part et d'autre
+        rise, run = max(v for k, v in jumps.items() if i <= k <= j)
+        if zones and a <= zones[-1]['_b']:
+            zones[-1].update(_b=b, toKm=round(points[b]['dist'] / 1000, 3), toEle=round(points[b]['ele']))
+        else:
+            zones.append({'_b': b, 'fromKm': round(points[a]['dist'] / 1000, 3),
+                          'toKm': round(points[b]['dist'] / 1000, 3), 'fromEle': round(points[a]['ele']),
+                          'toEle': round(points[b]['ele']), 'rise': round(rise), 'over': round(run)})
+        i = j + 1
+    for z in zones:
+        z.pop('_b')
+    return zones
 
 
 def smooth_elevation(points, window):
@@ -335,6 +418,15 @@ def build(course_id, fill_elevation_opt=False):
                 "--fill-elevation, ou en ajoutant \"fillElevation\": true dans course.json.")
         points = fill_elevation(course_dir, course['gpx'], points)
         elevation_source = f'Copernicus GLO-30 (récupérées, un point tous les {ELEVATION_SPACING} m)'
+    warnings = []
+    # Altitudes fausses du GPX (ex. Strava : paliers puis saut de 300 m le long d'une falaise) : interpolées
+    fixes = apply_elevation_fixes(points, course.get('elevationFixes', []), warnings)
+    # Altitudes suspectes restantes : signalées, jamais corrigées sans l'accord de l'utilisateur
+    for z in detect_elevation_anomalies(points):
+        warnings.append(
+            f"Altitudes suspectes km {z['fromKm']} à {z['toKm']} ({z['fromEle']} → {z['toEle']} m, saut de "
+            f"{z['rise']} m en {z['over']} m) : après vérification et accord, ajouter dans course.json "
+            f"\"elevationFixes\": [{{\"fromKm\": {z['fromKm']}, \"toKm\": {z['toKm']}}}]")
     elev = smooth_elevation(points, detection['smoothWindow'])
     climbs = find_climbs(points, elev, detection['minClimbLength'], detection['noiseTolerance'])
     # Altitudes du GPX : chiffres affichés sur l'altitude brute (comme Openrunner), sauf si course.json demande
@@ -343,7 +435,6 @@ def build(course_id, fill_elevation_opt=False):
     use_raw = elevation_source == 'GPX' and course.get('statsElevation', 'raw') != 'smoothed'
     shown = [p['ele'] for p in points] if use_raw else elev
     race_stats, catalog_stats = stats(points, shown)
-    warnings = []
     # Règle du projet (CLAUDE.md) : le tiret cadratin « — » ne doit jamais apparaître dans l'application
     if course.get('quality', 'standard') not in ('standard', 'high'):
         warnings.append(f'"quality" doit valoir "standard" ou "high" (reçu : {course["quality"]!r}), "standard" utilisé')
@@ -353,6 +444,11 @@ def build(course_id, fill_elevation_opt=False):
         if not isinstance(exag, (int, float)) or not 1 <= exag <= 5:
             warnings.append(f'"terrainExaggeration" doit être un nombre entre 1 et 5 (reçu : {exag!r}), ignoré')
             del course['terrainExaggeration']
+    if 'traceWidth' in course:
+        width = course['traceWidth']
+        if not isinstance(width, (int, float)) or not 0.3 <= width <= 3:
+            warnings.append(f'"traceWidth" doit \u00eatre un nombre entre 0.3 et 3 (re\u00e7u : {width!r}), ignor\u00e9')
+            del course['traceWidth']
     if '\u2014' in json.dumps(course, ensure_ascii=False):
         warnings.append('course.json contient le caractère « — » : le remplacer (virgule, deux-points, « · »)')
     aid = resolve_aid_stations(course.get('aidStations', []), points, warnings)
@@ -374,6 +470,10 @@ def build(course_id, fill_elevation_opt=False):
             'quality': course.get('quality', 'standard'),
             # Exagération du relief en 3D (facultative) : remplace celle du fond de carte
             **({'terrainExaggeration': course['terrainExaggeration']} if 'terrainExaggeration' in course else {}),
+            # Altitudes corrigées (facultatif) : tronçons interpolés, pour information
+            **({'elevationFixes': fixes} if fixes else {}),
+            # Épaisseur du tracé (facultative) : remplace le réglage traceWidth de js/config.js
+            **({'traceWidth': course['traceWidth']} if 'traceWidth' in course else {}),
             'stats': race_stats,
         },
         'branding': branding,
@@ -399,9 +499,12 @@ def summary(data, warnings):
         f"{len(data['track']['points'])} points GPS, {len(data['climbs'])} côtes ≥ {data['race']['minClimbLength']} m "
         f"(rouge {counts['rouge']}, orange {counts['orange']}, vert {counts['vert']}, < 4 % {counts['blanc']})",
         'Ravitaillements : ' + (', '.join(f"{a['name']} (km {a['km']})" for a in data['aidStations']) or 'aucun'),
-        'Altitudes : ' + data['race']['elevationSource'],
+        'Altitudes : ' + data['race']['elevationSource'] + ''.join(
+            f"\n  corrigées km {f['fromKm']} → {f['toKm']} : {f['points']} point(s) interpolé(s) de {f['fromEle']} à {f['toEle']} m"
+            for f in data['race'].get('elevationFixes', [])),
         'Relief 3D : ' + (f"exagération ×{data['race']['terrainExaggeration']}" if 'terrainExaggeration' in data['race']
                           else 'exagération du fond de carte'),
+        *([f"Épaisseur du tracé : ×{data['race']['traceWidth']}"] if 'traceWidth' in data['race'] else []),
         'Qualité : ' + ('haute (relief Mapterhorn, orthophotos IGN)' if data['race']['quality'] == 'high' else 'standard'),
         'Courbes de niveau : ' + ('oui' if 'contours' in data else 'non (python3 scripts/gen_contours.py ' + data['race']['id'] + ')'),
     ]

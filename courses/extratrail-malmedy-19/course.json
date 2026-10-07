@@ -1,0 +1,15 @@
+{
+  "id": "extratrail-malmedy-19",
+  "name": "Extratrail Malmedy 19 km (bleu)",
+  "subtitle": "Analyse des côtes ≥ 300 m",
+  "gpx": "extratrail_malmedy_bleu.gpx",
+  "branding": "extratrail",
+  "terrainExaggeration": 2.5,
+  "statsElevation": "smoothed",
+  "aidStations": [],
+  "detection": {
+    "minClimbLength": 300,
+    "noiseTolerance": 8,
+    "smoothWindow": 5
+  }
+}

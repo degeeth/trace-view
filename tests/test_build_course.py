@@ -224,5 +224,45 @@ class MissingElevation(unittest.TestCase):
         self.assertEqual(data['race']['stats']['dplus'], '+96 m')
 
 
+
+class ElevationFixes(unittest.TestCase):
+    """Altitudes fausses d'un GPX (paliers, saut) interpolées entre deux km (course.json, "elevationFixes")."""
+
+    def points(self):
+        # 0 à 1 km, un point tous les 100 m : palier à 100 m puis saut à 400 m au km 0,5
+        return [{'lat': 0, 'lon': 0, 'ele': 100.0 if i <= 5 else 400.0, 'dist': i * 100.0} for i in range(11)]
+
+    def test_interpolated_between_bounds(self):
+        pts, warnings = self.points(), []
+        applied = bc.apply_elevation_fixes(pts, [{'fromKm': 0.2, 'toKm': 0.8}], warnings)
+        self.assertEqual(warnings, [])
+        self.assertEqual(applied, [{'fromKm': 0.2, 'toKm': 0.8, 'points': 5, 'fromEle': 100, 'toEle': 400}])
+        self.assertEqual([round(p['ele']) for p in pts], [100, 100, 100, 150, 200, 250, 300, 350, 400, 400, 400])
+
+    def test_jump_with_plateaus_is_detected(self):
+        # 0 à 2 km, un point tous les 20 m : montée régulière, palier, saut de 200 m en 20 m, palier, montée
+        pts = []
+        for i in range(101):
+            d = i * 20.0
+            ele = 100 + d * 0.1 if d < 600 else 160.0 if d < 1000 else 360.0 if d < 1400 else 360 + (d - 1400) * 0.1
+            pts.append({'lat': 0, 'lon': 0, 'ele': ele, 'dist': d})
+        zones = bc.detect_elevation_anomalies(pts)
+        self.assertEqual(len(zones), 1)
+        self.assertEqual((zones[0]['fromKm'], zones[0]['toKm'], zones[0]['rise']), (0.58, 1.42, 200))
+        bc.apply_elevation_fixes(pts, [{'fromKm': zones[0]['fromKm'], 'toKm': zones[0]['toKm']}], [])
+        self.assertEqual(bc.detect_elevation_anomalies(pts), [])
+
+    def test_steep_but_possible_climb_is_not_detected(self):
+        # 60 % sur 100 m : raide mais réel
+        pts = [{'lat': 0, 'lon': 0, 'ele': 100 + i * 6.0, 'dist': i * 10.0} for i in range(11)]
+        self.assertEqual(bc.detect_elevation_anomalies(pts), [])
+
+    def test_invalid_fix_is_reported(self):
+        pts, warnings = self.points(), []
+        self.assertEqual(bc.apply_elevation_fixes(pts, [{'fromKm': 0.8, 'toKm': 0.2}, {'fromKm': 0.5}], warnings), [])
+        self.assertEqual(len(warnings), 2)
+        self.assertEqual(pts[3]['ele'], 100.0)
+
+
 if __name__ == '__main__':
     unittest.main()

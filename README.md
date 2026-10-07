@@ -27,6 +27,7 @@ Catégories de pente (moyenne de la côte) : 🟢 4–7 % · 🟠 7–10 % · �
 | Document | Contenu |
 |---|---|
 | [docs/CARTOGRAPHIE.md](docs/CARTOGRAPHIE.md) | architecture de la carte : technologies, sources, fonds, empilement des couches, 2D/3D, production des données géographiques |
+| [docs/LICENCES.md](docs/LICENCES.md) | licences des fonds de carte et des données, en vue d'un usage commercial : ce qui est autorisé, ce qu'il faut remplacer |
 | [DESIGN.md](DESIGN.md) | identité visuelle (couleurs, typographie, composants) |
 | [docs/BACKLOG.md](docs/BACKLOG.md) | idées retenues, pas encore réalisées |
 | [CHANGES.md](CHANGES.md) | journal des changements |
@@ -95,6 +96,7 @@ courses/<id>/course.json + <fichier>.gpx ──► scripts/build_course.py <id> 
 | `branding` | identité visuelle, fichier `branding/<nom>.json` (couleurs du tracé, icône des ravitaillements) ; `defaut` si absent |
 | `aidStations` | ravitaillements : **km**, **coordonnées**, ou les deux (le script calcule ce qui manque) ; facultatifs : `supplies` (contenu, voir ci-dessous) et `note` |
 | `detection` | facultatif : longueur minimale d'une côte (m), tolérance au bruit GPS (m), lissage (points) |
+| `elevationFixes` | facultatif : altitudes fausses du GPX (paliers, sauts) interpolées entre deux km, `[{ "fromKm": 3.03, "toKm": 4.06 }]` ; le GPX n'est pas modifié |
 | `terrainExaggeration` | facultatif : exagération du relief en 3D (1 à 5), remplace celle du fond de carte ; 2,5 pour un relief doux comme les Ardennes, absent en montagne |
 | `quality` | facultatif : `"high"` pour une carte plus détaillée (relief Mapterhorn jusqu'au zoom 17, orthophotos IGN en France sur le fond Satellite) ; `"standard"` par défaut. Recommandé en montagne, plus lourd à charger |
 | `fillElevation` | facultatif : `true` pour récupérer les altitudes d'un GPX qui n'en a pas (voir ci-dessous) |
@@ -258,6 +260,7 @@ tests/
   smoke.mjs              test de bout en bout dans Chrome
 .claude/skills/add-course/       skill Claude Code du workflow (anglais)
 docs/CARTOGRAPHIE.md     documentation technique de la carte
+docs/LICENCES.md         licences des fonds de carte et des données
 DESIGN.md                identité visuelle (d'après grandtrail.be, édition Winter)
 CHANGES.md               journal des changements
 ```

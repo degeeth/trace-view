@@ -101,14 +101,15 @@ try {
   // Modes du tracé
   await page.evaluate(() => trace.emit('trace:mode', 'slope'));
   const slope = await page.evaluate(() => ({
-    gradient: !!trace.map.getPaintProperty('trace-line', 'line-gradient'),
+    // tronçons colorés selon la pente (plusieurs couleurs)
+    gradient: new Set(trace.map.getSource('trace').serialize().data.features.map(f => f.properties.color)).size > 2,
     legend: document.querySelector('.slope-legend').classList.contains('visible')
   }));
   check('Mode Pente : tracé en dégradé + légende', slope.gradient && slope.legend);
   await page.evaluate(() => trace.emit('trace:mode', 'climbs'));
   check('Mode Côtes : côtes et pastilles visibles', await page.evaluate(() =>
     trace.map.getLayoutProperty('badges-circle', 'visibility') === 'visible'
-    && !trace.map.getPaintProperty('trace-line', 'line-gradient')));
+    && trace.map.getSource('trace').serialize().data.features.every(f => !f.properties.color)));
 
   // Curseur du profil
   await page.evaluate(() => trace.emit('cursor:move', 25));
@@ -179,7 +180,7 @@ try {
   });
   check('Ombrage du relief selon le réglage satellite', shadeOnSat.ok, `satellite : ${shadeOnSat.vis}`);
   const afterSwitch = await page.evaluate(() => ({
-    hl: !!trace.map.getLayer('climb-hl-line') && !!trace.map.getSource('climb-hl').serialize().data.geometry,
+    hl: !!trace.map.getLayer('climb-hl-line') && trace.map.getSource('climb-hl').serialize().data.features?.length > 0,
     icon: trace.map.hasImage('aid-icon'),
     terrain: !!trace.map.getTerrain()
   }));

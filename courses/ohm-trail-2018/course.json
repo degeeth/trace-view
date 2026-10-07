@@ -5,6 +5,10 @@
   "gpx": "Ohm_Trail.gpx",
   "branding": "ohm-trail",
   "terrainExaggeration": 2.5,
+  "traceWidth": 0.6,
+  "elevationFixes": [
+    { "fromKm": 0.886, "toKm": 1.51 }
+  ],
   "aidStations": [
     { "name": "Vivaro", "lat": 50.4479671, "lng": 5.7238898 },
     { "name": "Ninglinspo", "lat": 50.4691417, "lng": 5.7458437, "note": "Aller-retour jusqu'au ravitaillement puis retour sur ses pas" },

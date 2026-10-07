@@ -21,13 +21,19 @@
     "id": "ohm-trail-2018",
     "name": "Ohm Trail 2018",
     "distanceKm": 34.7,
-    "dplus": 2017
+    "dplus": 1986
   },
   {
     "id": "extratrail-stoumont-30",
     "name": "Extratrail Stoumont 30 km (noir)",
     "distanceKm": 30.1,
     "dplus": 1308
+  },
+  {
+    "id": "extratrail-malmedy-19",
+    "name": "Extratrail Malmedy 19 km (bleu)",
+    "distanceKm": 18.8,
+    "dplus": 518
   },
   {
     "id": "hrp-10-lescun-etsaut",
