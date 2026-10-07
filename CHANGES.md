@@ -965,3 +965,19 @@ README, skill
   (`ResizeObserver`), elle était entassée à gauche quand le profil était construit masqué (onglet Carte mobile)
 - **Démo** `demo-comparaison-gt65.html` : carte actuelle du GTLC (Tracedetrail) et proposition côte à côte (page locale, non versionnée, comme `demo-grandtrail-gt65.html`)
 - Backlog : parcours sur smartphone (à analyser), libellés serrés sur mobile, points de contrôle sans ravito
+
+---
+
+## 52. Profil Ravitaillements épuré
+
+**Fichiers** : `js/chart.js`, `style.css`, `index.html`, `docs/BACKLOG.md`
+
+- Courbe à la même hauteur que dans les modes Côtes et Pente (mesuré : 150 px sur ordinateur, 70 px sur mobile
+  pour le GT65) : la barre tient sur une ligne et prend la place de l'axe des distances
+- Sur la courbe, petite icône de l'identité sur une pastille blanche de 18 px (taille de l'ancienne icône de la barre)
+- Barre : un point à chaque ravitaillement (comme au départ et à l'arrivée), km et nom sans puce, plus de
+  barrières horaires (visibles dans la bulle du ravito et sur la carte) ; distance et D+ de chaque tronçon sur la
+  ligne des km, en plus petit
+- Chevauchements réglés sur le rendu réel : libellés d'un ravito trop proche masqués (point gardé, détail au
+  survol ; départ et arrivée toujours affichés), texte d'un tronçon réduit au D+ puis masqué ; arrivée calée à
+  droite, départ à gauche. Vérifié sans chevauchement sur 4 courses, ordinateur et mobile

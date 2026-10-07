@@ -703,16 +703,17 @@ tbody tr.hidden { display: none; }
   color: var(--gt-on-primary);
 }
 
-/* Barre ravitaillements sous le profil */
+/* Barre ravitaillements sous le profil : une ligne (point, km, nom) qui remplace l'axe des distances ; distance
+   et D+ des tronçons sur la ligne des km, plus petits */
 #rv-bar {
-  padding: 0 16px 10px;
+  padding: 0 16px 8px;
   border-top: 1px solid var(--gt-border);
   background: var(--gt-surface);
   font-family: var(--gt-font);
 }
 .rv-bar-inner {
   position: relative;
-  height: 78px;
+  height: 28px;
 }
 .rv-bar-wp {
   position: absolute;
@@ -720,8 +721,7 @@ tbody tr.hidden { display: none; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
-  top: 0;
+  top: -4px;
   z-index: 2;
 }
 .rv-bar-dot {
@@ -733,44 +733,34 @@ tbody tr.hidden { display: none; }
   flex-shrink: 0;
   margin-bottom: 2px;
 }
-.rv-bar-aid {
-  width: 18px; height: 18px; border-radius: 50%;
-  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.35);
-  display: flex; align-items: center; justify-content: center;
-}
-.rv-bar-aid .aid-icon { display: block; }
 .rv-bar-km {
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.03em;
+  line-height: 12px;
   white-space: nowrap;
 }
 .rv-bar-name {
   font-size: 9px;
+  line-height: 11px;
   color: var(--gt-text-muted);
   white-space: nowrap;
 }
+.rv-bar-wp.rv-end { transform: translateX(calc(-100% + 4px)); align-items: flex-end; }   /* calé à droite */
+.rv-bar-wp.rv-start { transform: translateX(-4px); align-items: flex-start; }
+.rv-bar-wp.rv-tight .rv-bar-km, .rv-bar-wp.rv-tight .rv-bar-name, .rv-bar-wp.rv-tight .rv-bar-supplies { display: none; }
 .rv-bar-seg {
   position: absolute;
-  top: 52px;
-  height: 26px;
+  top: 6px;
+  height: 12px;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
-  border-left: 1px solid var(--gt-border);
 }
-.rv-seg-dist {
-  font-size: 9px;
-  color: var(--gt-text);
-  font-weight: 700;
-  white-space: nowrap;
-}
-.rv-seg-dp {
-  font-size: 9px;
-  color: var(--gt-trace);
+.rv-bar-seg span {
+  font-size: 8.5px;
   font-weight: 600;
+  color: var(--gt-text-muted);
   white-space: nowrap;
 }
 
@@ -859,8 +849,6 @@ tbody tr.hidden { display: none; }
   /* Carte + profil */
   .map-card { flex: 1; }
   .chart-card { flex: 0 0 210px; }
-  /* Profil Ravitaillements : la barre sous la courbe prend ≈ 80 px, la courbe garde sa hauteur */
-  .chart-card:has(.rv-mode) { flex-basis: 290px; }
   .card-title { padding: 7px 12px 5px; font-size: .75em; }
   .card-title .selection-info { display: none; }
   .profile-header { padding: 8px 12px 0; }
@@ -929,9 +917,6 @@ header h1 .icon { color: var(--gt-primary); vertical-align: -3px; margin-right: 
 .aid-cutoff .icon { flex-shrink: 0; margin-top: 2px; }
 .aid-cutoff span { display: block; color: var(--gt-text-muted); font-size: 11px; }
 .aid-legs { display: flex; flex-direction: column; margin-top: 6px; font-size: 11px; color: var(--gt-text-muted); }
-.rv-bar-cutoff { display: flex; align-items: center; gap: 2px; font-size: 10px; font-weight: 700; color: var(--gt-ink);
-  white-space: nowrap; }
-
 /* Style « Sentiers » (vignette) et anciens styles */
 .m3d-thumb-sentiers { background:
   repeating-linear-gradient(120deg, transparent 0 7px, #b4522a 7px 9px, transparent 9px 12px),

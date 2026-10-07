@@ -54,8 +54,6 @@ Passage 2D ↔ 3D : le fondu enchaîné est en place (`mode3DTransition: 'fade'`
   Connect, Suunto, Coros, Strava, Komoot : import de fichier ou API selon la marque) ; mode hors connexion
   (application web installable, tuiles en cache, position GPS sur le tracé). À arbitrer : besoin réel des
   coureurs, coût de maintenance, conditions des fournisseurs de tuiles pour le hors-ligne.
-- Barre des ravitaillements sur mobile étroit : libellés qui se touchent quand deux ravitos sont proches
-  (GT65 : Bévercé et Mont à 7 km d'écart, 390 px de large).
 - Points de contrôle avec barrière horaire sans ravitaillement (Tracedetrail en prévoit) : type de point à ajouter.
 - Aide contextuelle : une phrase dans la carte et le profil tant qu'aucune côte n'est choisie (clic sur une
   pastille, survol du profil).

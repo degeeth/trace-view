@@ -2,7 +2,7 @@
 // Dessiné sur le tracé complet (tous les points GPS) pour rester précis en zoom.
 // Survoler ou glisser le doigt sur le profil déplace un curseur sur la carte.
 import { on, emit } from './bus.js';
-import { CAT_COLORS, slopeColor, brandIconSvg, brandIconBox, brandIconImage, brandIconColor, SUPPLIES, suppliesByCategory, supplyText, escapeHtml, fmtClock, cutoffText } from './race.js';
+import { CAT_COLORS, slopeColor, brandIconBox, brandIconImage, brandIconColor, SUPPLIES, suppliesByCategory, supplyText, escapeHtml } from './race.js';
 import { icon } from './icons.js';
 
 const INK = '#04080b';
@@ -33,8 +33,8 @@ export function createChart(race, { canvas, wrap, rvBar, infoEl, resetBtn }) {
 
   const waypoints = () => [
     { km: 0, name: 'Départ', kind: 'start' },
-    ...race.aidStations.map(a => ({ km: a.km, name: a.name, kind: 'aid', aid: a, cutoff: a.cutoff })),
-    { km: race.totalKm, name: 'Arrivée', kind: 'end', cutoff: race.race.finishCutoff }
+    ...race.aidStations.map(a => ({ km: a.km, name: a.name, kind: 'aid', aid: a })),
+    { km: race.totalKm, name: 'Arrivée', kind: 'end' }
   ];
   const eleAtKm = km => race.ele[race.idxAtKm(km)];
 
@@ -116,14 +116,13 @@ export function createChart(race, { canvas, wrap, rvBar, infoEl, resetBtn }) {
             ctx.fillStyle = '#fff'; ctx.strokeStyle = endpointInk(); ctx.lineWidth = 2.5; ctx.fill(); ctx.stroke(); return;
           }
           if (wp.kind === 'end') { dot(px, py, endpointInk()); return; }
-          // Même pastille que sur la carte : cercle blanc, icône noire
-          const r = isAid ? 10 : 8;
+          // Petite pastille blanche (18 px, comme l'ancienne icône de la barre) et icône de l'identité, sur la courbe
           ctx.save();
-          ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 1;
-          ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2);
+          ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1;
+          ctx.beginPath(); ctx.arc(px, py, 9, 0, Math.PI * 2);
           ctx.fillStyle = '#fff'; ctx.fill();
           ctx.restore();
-          const { width: iw, height: ih } = brandIconBox(race, r * 1.6);
+          const { width: iw, height: ih } = brandIconBox(race, 13);
           if (aidImg.complete) ctx.drawImage(aidImg, px - iw / 2, py - ih / 2, iw, ih);
         });
         // Point culminant + son altitude
@@ -272,36 +271,56 @@ export function createChart(race, { canvas, wrap, rvBar, infoEl, resetBtn }) {
     if (isAid) buildAidBar();
   }
 
-  // Barre sous le profil : distance et D+ entre ravitaillements
+  // Barre sous le profil, sur une ligne : un point et le km de chaque ravitaillement (nom dessous), et entre deux
+  // points la distance et le D+ du tronçon, plus petits. Les chevauchements sont réglés après rendu, sur les
+  // tailles réelles : libellés d'un point masqués (le point reste, détail au survol ; départ et arrivée toujours
+  // affichés), texte d'un tronçon réduit au D+ puis masqué
   function buildAidBar() {
     const wps = waypoints().map(wp => ({ ...wp, dplus: Math.round(race.cumDplus[race.idxAtKm(wp.km)]) }));
     const ca = chart.chartArea, w = chart.canvas.offsetWidth;
     const left = ca.left / w * 100, width = (ca.right - ca.left) / w * 100;
     const pct = km => left + km / race.totalKm * width;
+    const fmtKm = km => km.toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const kmText = wp => `${(Math.round(wp.km * 10) / 10).toLocaleString('fr-BE')} KM`;
     let html = '<div class="rv-bar-inner">';
     for (let i = 0; i < wps.length - 1; i++) {
-      const a = wps[i], b = wps[i + 1];
-      html += `<div class="rv-bar-seg" style="left:${pct(a.km).toFixed(2)}%;width:${(pct(b.km) - pct(a.km)).toFixed(2)}%">
-        <span class="rv-seg-dist">${(b.km - a.km).toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km</span><span class="rv-seg-dp">+${b.dplus - a.dplus} m</span></div>`;
+      const a = wps[i], b = wps[i + 1], dp = `+${b.dplus - a.dplus} m`, full = `${fmtKm(b.km - a.km)} km · ${dp}`;
+      html += `<div class="rv-bar-seg" style="left:${pct(a.km).toFixed(2)}%;width:${(pct(b.km) - pct(a.km)).toFixed(2)}%"`
+        + ` title="${escapeHtml(`${a.name} → ${b.name} : ${full}`)}"><span data-full="${full}" data-dp="${dp}">${full}</span></div>`;
     }
     wps.forEach(wp => {
       const color = wp.kind === 'aid' ? INK : endpointInk();
-      const dot = wp.kind === 'aid'
-        ? `<div class="rv-bar-aid">${brandIconSvg(race, brandIconColor(race), brandIconBox(race, 13).height)}</div>`
-        : `<div class="rv-bar-dot" style="background:${color}"></div>`;
       // Contenu du ravito : une icône par catégorie présente ; détail complet au survol
       const groups = wp.aid ? suppliesByCategory(wp.aid) : [];
       const supplies = groups.map(([cat]) => icon(SUPPLIES[cat].icon, 11)).join('');
-      const title = [wp.cutoff && `Barrière horaire : ${cutoffText(wp.cutoff)}`,
-        ...groups.map(([cat, items]) => `${SUPPLIES[cat].label} : `
+      const title = [`${wp.name} · ${kmText(wp)}`, ...groups.map(([cat, items]) => `${SUPPLIES[cat].label} : `
         + (items.map(supplyText).filter(Boolean).join(', ') || 'non précisé')), wp.aid?.note].filter(Boolean).join('\n');
-      html += `<div class="rv-bar-wp" style="left:${pct(wp.km).toFixed(2)}%"${title ? ` title="${escapeHtml(title)}"` : ''}>${dot}
-        <div class="rv-bar-km" style="color:${color}">${(Math.round(wp.km * 10) / 10).toLocaleString('fr-BE')} KM</div>
-        <div class="rv-bar-name">• ${escapeHtml(wp.name)}</div>
-        ${wp.cutoff ? `<div class="rv-bar-cutoff">${icon('timer', 10)} ${fmtClock(wp.cutoff.time)}</div>` : ''}
+      html += `<div class="rv-bar-wp rv-${wp.kind}" style="left:${pct(wp.km).toFixed(2)}%" title="${escapeHtml(title)}">
+        <div class="rv-bar-dot" style="background:${color}"></div>
+        <div class="rv-bar-km" style="color:${color}">${kmText(wp)}</div>
+        <div class="rv-bar-name">${escapeHtml(wp.name)}</div>
         ${supplies ? `<div class="rv-bar-supplies">${supplies}</div>` : ''}</div>`;
     });
     rvBar.innerHTML = html + '</div>';
+
+    // Chevauchements, mesurés sur le rendu
+    const labelsOf = el => [...el.querySelectorAll('.rv-bar-km, .rv-bar-name, .rv-bar-supplies')].map(e => e.getBoundingClientRect());
+    const span = el => { const r = labelsOf(el); return { l: Math.min(...r.map(x => x.left)), r: Math.max(...r.map(x => x.right)) }; };
+    const wpEls = [...rvBar.querySelectorAll('.rv-bar-wp')];
+    let last = 0;
+    wpEls.forEach((el, i) => {
+      if (i === 0 || span(el).l >= span(wpEls[last]).r + 6) { last = i; return; }
+      if (i === wpEls.length - 1) { if (last > 0) wpEls[last].classList.add('rv-tight'); last = i; }
+      else el.classList.add('rv-tight');
+    });
+    const shown = wpEls.filter(el => !el.classList.contains('rv-tight')).flatMap(labelsOf);
+    const overlaps = r => shown.some(o => r.left < o.right + 4 && o.left < r.right + 4 && r.top < o.bottom && o.top < r.bottom);
+    rvBar.querySelectorAll('.rv-bar-seg span').forEach(el => {
+      for (const text of [el.dataset.full, el.dataset.dp, '']) {
+        el.textContent = text;
+        if (!text || !overlaps(el.getBoundingClientRect())) break;
+      }
+    });
   }
 
   // ── Profil → curseur ──
