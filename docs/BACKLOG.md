@@ -39,13 +39,24 @@ Passage 2D ↔ 3D : le fondu enchaîné est en place (`mode3DTransition: 'fade'`
 
 ## Contenu des courses
 
-- Ravitaillements réels (et leur contenu) : GTLC 65, Extratrail Stoumont, OSO (contenu fictif de test à remplacer).
+- Ravitaillements réels (et leur contenu) : Extratrail Stoumont, OSO (contenu fictif de test à remplacer). GTLC 65 :
+  ravitaillements et barrières 2026 en place (carte Tracedetrail de l'organisation), contenu à obtenir ; GPX 2026
+  officiel à demander.
 - OSO : vérifier s'il existe un logo propre à la course (affiche, dossard), à préférer à celui du club.
 - Extratrail : GPX avec altitudes d'origine (D+ annoncé 967 m, Copernicus donne 1 308 m).
 - Chiffre de D+ officiel de l'Extratrail Stoumont pour juger les altitudes récupérées (Copernicus).
 
 ## Interface
 
+- **Parcours sur smartphone** (à analyser) : aujourd'hui le GTLC propose, via Tracedetrail, un QR code vers
+  l'application Trail Connect (parcours embarqué, guidage). Pistes, de la plus simple à la plus lourde :
+  QR code vers la page mobile de la course ; envoi du GPX vers la montre ou l'application du coureur (Garmin
+  Connect, Suunto, Coros, Strava, Komoot : import de fichier ou API selon la marque) ; mode hors connexion
+  (application web installable, tuiles en cache, position GPS sur le tracé). À arbitrer : besoin réel des
+  coureurs, coût de maintenance, conditions des fournisseurs de tuiles pour le hors-ligne.
+- Barre des ravitaillements sur mobile étroit : libellés qui se touchent quand deux ravitos sont proches
+  (GT65 : Bévercé et Mont à 7 km d'écart, 390 px de large).
+- Points de contrôle avec barrière horaire sans ravitaillement (Tracedetrail en prévoit) : type de point à ajouter.
 - Aide contextuelle : une phrase dans la carte et le profil tant qu'aucune côte n'est choisie (clic sur une
   pastille, survol du profil).
 - Profil plus haut ou repliable sur mobile.

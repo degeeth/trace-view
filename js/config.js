@@ -5,6 +5,11 @@
 // lui-même (js/style-sentiers.js), pas ici.
 
 export const MAP_CONFIG = {
+  // ── Licences (docs/LICENCES.md) ──
+  commercialUse: true,               // carte publiée sur le site d'une organisation : seules les sources dont les
+                                     // conditions l'autorisent (pas d'Esri, ni des serveurs OSM et OpenTopoMap ;
+                                     // photos aériennes SPW et IGN). false : tous les fonds (usage personnel)
+
   // ── Au démarrage ──
   defaultStyle: 'sentiers',          // fond de carte au chargement (clé de MAP_STYLES, js/map-styles.js)
   stylePanelCollapsed: true,         // panneau « Fond de carte » replié

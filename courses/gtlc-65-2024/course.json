@@ -6,7 +6,34 @@
   "branding": "gtlc",
   "terrainExaggeration": 2.5,
   "statsElevation": "smoothed",
-  "aidStations": [],
+  "start": "2026-11-07T09:00",
+  "finishCutoff": "20:00",
+  "aidStations": [
+    {
+      "name": "Bévercé",
+      "lat": 50.44654,
+      "lng": 6.05372,
+      "cutoff": "11:15"
+    },
+    {
+      "name": "Mont",
+      "lat": 50.47146,
+      "lng": 6.04072,
+      "cutoff": "12:25"
+    },
+    {
+      "name": "Moviemills",
+      "lat": 50.43303,
+      "lng": 6.02768,
+      "cutoff": "14:20"
+    },
+    {
+      "name": "Barrage de Robertville",
+      "lat": 50.45209,
+      "lng": 6.10744,
+      "cutoff": "17:20"
+    }
+  ],
   "detection": {
     "minClimbLength": 300,
     "noiseTolerance": 8,

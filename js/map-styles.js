@@ -3,6 +3,7 @@
 // ajoutés par l'application (km, ravitaillements, côtes) s'affichent partout.
 
 import { SENTIERS_STYLE } from './style-sentiers.js';
+import { MAP_CONFIG } from './config.js';
 
 // ── Style « Terrain » (ANCIEN, à supprimer : palette reprise de LiveTrail) ──
 // Palette chaude inspirée des cartes topo : fond crème, végétation translucide
@@ -133,7 +134,7 @@ const TOPO_STYLE = {
       type: 'raster',
       tiles: ['https://tile.opentopomap.org/{z}/{x}/{y}.png'],
       tileSize: 256, maxzoom: 17,
-      attribution: '© OpenTopoMap (CC-BY-SA) | © OpenStreetMap contributors'
+      attribution: '© <a href="https://opentopomap.org" target="_blank">OpenTopoMap</a> (CC-BY-SA) | © OpenStreetMap contributors'
     }
   },
   layers: [{ id: 'topo-base', type: 'raster', source: 'topo' }]
@@ -144,6 +145,7 @@ const TOPO_STYLE = {
 // pour des tuiles 256 → net sur écran Retina ; PNG transparent hors couverture.
 const SPW_ORTHO = 'https://geoservices.wallonie.be/arcgis/rest/services/IMAGERIE/ORTHO_LAST/MapServer/export'
   + '?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=512,512&format=png32&transparent=true&f=image';
+const SPW_ATTRIBUTION = 'Sources des données : <a href="https://geoportail.wallonie.be" target="_blank">SPW</a> (orthophotos)';
 const SAT_STYLE = {
   version: 8,
   glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
@@ -152,18 +154,30 @@ const SAT_STYLE = {
       type: 'raster',
       tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
       tileSize: 256, maxzoom: 19,
-      attribution: '© Esri World Imagery'
+      attribution: 'Source : Esri, Maxar, Earthstar Geographics et la communauté des utilisateurs SIG'
     },
     'spw-ortho': {
       type: 'raster',
       tiles: [SPW_ORTHO],
       tileSize: 256, minzoom: 10, maxzoom: 19,
       bounds: [2.84, 49.49, 6.41, 50.82],
-      attribution: '© SPW (orthophotos)'
+      attribution: SPW_ATTRIBUTION
     }
   },
   layers: [
     { id: 'sat-base', type: 'raster', source: 'satellite' },
+    { id: 'spw-ortho', type: 'raster', source: 'spw-ortho' }
+  ]
+};
+
+// Photos aériennes sous licence ouverte (usage commercial, réglage commercialUse) : orthophotos SPW (Wallonie)
+// et IGN (France, ajoutées par map.js) sur le fond Sentiers sans libellés ; ailleurs, la carte reste visible
+// au lieu d'un vide. Esri, dont les conditions excluent cet usage sans licence ArcGIS, n'est pas utilisé.
+const OPEN_ORTHO_STYLE = {
+  ...SENTIERS_STYLE,
+  sources: { ...SENTIERS_STYLE.sources, 'spw-ortho': SAT_STYLE.sources['spw-ortho'] },
+  layers: [
+    ...SENTIERS_STYLE.layers.filter(l => l.type !== 'symbol'),
     { id: 'spw-ortho', type: 'raster', source: 'spw-ortho' }
   ]
 };
@@ -185,14 +199,22 @@ const OSM_STYLE = {
 
 // dark : libellés et ciel adaptés aux fonds sombres ; contours : courbes de niveau Copernicus
 // deprecated : ancien style, encore proposé (grisé) mais à supprimer (palette et réglages repris de LiveTrail)
-export const MAP_STYLES = {
+// nonCommercial : serveur dont les conditions excluent (ou déconseillent) un usage commercial, retiré quand
+// commercialUse est activé (js/config.js, docs/LICENCES.md)
+const COMMERCIAL = MAP_CONFIG.commercialUse;
+const ALL_STYLES = {
   sentiers:  { url: SENTIERS_STYLE,                                  label: 'Sentiers',   exag: 1.5, contours: true },
-  osm:       { url: OSM_STYLE,                                       label: 'OSM',        exag: 1.3 },
-  satellite: { url: SAT_STYLE,                                       label: 'Satellite',  exag: 1.5, dark: true },
+  osm:       { url: OSM_STYLE,                                       label: 'OSM',        exag: 1.3, nonCommercial: true },
+  satellite: COMMERCIAL
+    ? { url: OPEN_ORTHO_STYLE, label: 'Photos', exag: 1.5, dark: true }
+    : { url: SAT_STYLE,        label: 'Satellite', exag: 1.5, dark: true },
   bright:    { url: 'https://tiles.openfreemap.org/styles/bright',   label: 'Streets',    exag: 1.0 },
   positron:  { url: 'https://tiles.openfreemap.org/styles/positron', label: 'Light',      exag: 0.8 },
   dark:      { url: 'https://tiles.openfreemap.org/styles/dark',     label: 'Dark',       exag: 0.8, dark: true },
-  topo:      { url: TOPO_STYLE,                                      label: 'Topo (courbes)', exag: 1.4 },
+  topo:      { url: TOPO_STYLE,                                      label: 'Topo (courbes)', exag: 1.4, nonCommercial: true },
   topotrail: { url: 'styles/topo-trail.json', label: 'Topo trail', exag: 1.5, contours: true, deprecated: true },
   terrain:   { url: TERRAIN_STYLE,            label: 'Terrain',    exag: 1.5, contours: true, deprecated: true }
 };
+export const MAP_STYLES = Object.fromEntries(
+  Object.entries(ALL_STYLES).filter(([, st]) => !(COMMERCIAL && st.nonCommercial)));
+

@@ -2,7 +2,7 @@
 // Dessiné sur le tracé complet (tous les points GPS) pour rester précis en zoom.
 // Survoler ou glisser le doigt sur le profil déplace un curseur sur la carte.
 import { on, emit } from './bus.js';
-import { CAT_COLORS, slopeColor, brandIconSvg, brandIconBox, brandIconImage, brandIconColor, SUPPLIES, suppliesByCategory, supplyText, escapeHtml } from './race.js';
+import { CAT_COLORS, slopeColor, brandIconSvg, brandIconBox, brandIconImage, brandIconColor, SUPPLIES, suppliesByCategory, supplyText, escapeHtml, fmtClock, cutoffText } from './race.js';
 import { icon } from './icons.js';
 
 const INK = '#04080b';
@@ -33,8 +33,8 @@ export function createChart(race, { canvas, wrap, rvBar, infoEl, resetBtn }) {
 
   const waypoints = () => [
     { km: 0, name: 'Départ', kind: 'start' },
-    ...race.aidStations.map(a => ({ km: a.km, name: a.name, kind: 'aid', aid: a })),
-    { km: race.totalKm, name: 'Arrivée', kind: 'end' }
+    ...race.aidStations.map(a => ({ km: a.km, name: a.name, kind: 'aid', aid: a, cutoff: a.cutoff })),
+    { km: race.totalKm, name: 'Arrivée', kind: 'end', cutoff: race.race.finishCutoff }
   ];
   const eleAtKm = km => race.ele[race.idxAtKm(km)];
 
@@ -292,11 +292,13 @@ export function createChart(race, { canvas, wrap, rvBar, infoEl, resetBtn }) {
       // Contenu du ravito : une icône par catégorie présente ; détail complet au survol
       const groups = wp.aid ? suppliesByCategory(wp.aid) : [];
       const supplies = groups.map(([cat]) => icon(SUPPLIES[cat].icon, 11)).join('');
-      const title = [...groups.map(([cat, items]) => `${SUPPLIES[cat].label} : `
+      const title = [wp.cutoff && `Barrière horaire : ${cutoffText(wp.cutoff)}`,
+        ...groups.map(([cat, items]) => `${SUPPLIES[cat].label} : `
         + (items.map(supplyText).filter(Boolean).join(', ') || 'non précisé')), wp.aid?.note].filter(Boolean).join('\n');
       html += `<div class="rv-bar-wp" style="left:${pct(wp.km).toFixed(2)}%"${title ? ` title="${escapeHtml(title)}"` : ''}>${dot}
         <div class="rv-bar-km" style="color:${color}">${(Math.round(wp.km * 10) / 10).toLocaleString('fr-BE')} KM</div>
         <div class="rv-bar-name">• ${escapeHtml(wp.name)}</div>
+        ${wp.cutoff ? `<div class="rv-bar-cutoff">${icon('timer', 10)} ${fmtClock(wp.cutoff.time)}</div>` : ''}
         ${supplies ? `<div class="rv-bar-supplies">${supplies}</div>` : ''}</div>`;
     });
     rvBar.innerHTML = html + '</div>';
@@ -330,7 +332,11 @@ export function createChart(race, { canvas, wrap, rvBar, infoEl, resetBtn }) {
     infoEl.textContent = climb ? race.climbLabel(climb) : '';
     applyView();
   });
-  window.addEventListener('resize', () => { if (traceMode === 'ravitaillements') buildAidBar(); });
+  // Barre recalculée à chaque changement de taille du profil (fenêtre, onglet Carte affiché sur mobile, panneau,
+  // iframe) : construite pendant que le profil est masqué, elle aurait une largeur nulle
+  new ResizeObserver(() => requestAnimationFrame(() => {
+    if (traceMode === 'ravitaillements' && chart.chartArea) buildAidBar();
+  })).observe(canvas.parentElement);
 
   applyMode();
   return chart;

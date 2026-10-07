@@ -35,7 +35,9 @@ import hashlib
 import json
 import math
 import os
+import re
 import sys
+from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -351,8 +353,74 @@ def resolve_aid_stations(stations, points, warnings):
                             'de "supplies" ("brand")')
         if st.get('note'):
             aid['note'] = str(st['note']).strip()
+        if 'cutoff' in st:
+            aid['cutoff'] = st['cutoff']          # barrière horaire brute, résolue par time_barriers()
         resolved.append(aid)
     return sorted(resolved, key=lambda a: a['km'])
+
+
+def parse_clock(value, start):
+    """Heure d'une barrière : "11:15" (jour du départ, ou suivant si avant l'heure de départ) ou
+    "2026-11-08T02:30" (date complète, courses de plusieurs jours). None si illisible."""
+    value = str(value).strip()
+    if re.fullmatch(r'\d{1,2}:\d{2}', value):
+        h, m = map(int, value.split(':'))
+        if h > 23 or m > 59:
+            return None
+        dt = start.replace(hour=h, minute=m, second=0)
+        while dt < start:
+            dt += timedelta(days=1)
+        return dt
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def time_barriers(course, aid, total_km, warnings):
+    """Départ ("start") et barrières horaires (aidStations[].cutoff, "finishCutoff") : heure, temps de course
+    depuis le départ (min) et vitesse moyenne minimale pour passer (km/h). Renvoie les champs de `race`."""
+    race = {}
+    has_cutoffs = any('cutoff' in a for a in aid) or 'finishCutoff' in course
+    start = None
+    if 'start' in course:
+        try:
+            start = datetime.fromisoformat(str(course['start']))
+            race['start'] = start.isoformat(timespec='minutes')
+        except ValueError:
+            warnings.append(f'"start" illisible ({course["start"]!r}), attendu "2026-11-07T09:00"')
+    if has_cutoffs and not start:
+        warnings.append('Barrières horaires ignorées : indiquer le départ dans course.json, "start": "2026-11-07T09:00"')
+        for a in aid:
+            a.pop('cutoff', None)
+        return race
+
+    def barrier(value, km, label):
+        dt = parse_clock(value, start)
+        if dt is None or dt <= start:
+            warnings.append(f'Barrière horaire de « {label} » illisible ou avant le départ ({value!r}), ignorée')
+            return None
+        minutes = round((dt - start).total_seconds() / 60)
+        return {'time': dt.isoformat(timespec='minutes'), 'elapsed': minutes,
+                'speed': round(km / (minutes / 60), 2) if km else None}
+
+    last = None
+    for a in aid:
+        if 'cutoff' not in a:
+            continue
+        b = barrier(a.pop('cutoff'), a['km'], a['name'])
+        if b:
+            if last and b['elapsed'] <= last[1]:
+                warnings.append(f'Barrière horaire de « {a["name"]} » ({b["time"][11:]}) pas après celle de « {last[0]} »')
+            a['cutoff'] = b
+            last = (a['name'], b['elapsed'])
+    if 'finishCutoff' in course:
+        b = barrier(course['finishCutoff'], total_km, 'Arrivée')
+        if b:
+            if last and b['elapsed'] <= last[1]:
+                warnings.append(f'Barrière horaire de l\'arrivée pas après celle de « {last[0]} »')
+            race['finishCutoff'] = b
+    return race
 
 
 def normalize_supplies(items, name, warnings):
@@ -452,6 +520,7 @@ def build(course_id, fill_elevation_opt=False):
     if '\u2014' in json.dumps(course, ensure_ascii=False):
         warnings.append('course.json contient le caractère « — » : le remplacer (virgule, deux-points, « · »)')
     aid = resolve_aid_stations(course.get('aidStations', []), points, warnings)
+    barriers = time_barriers(course, aid, points[-1]['dist'] / 1000, warnings)
 
     contours_dir = os.path.join(ROOT, 'data', 'contours', course_id)
     contours = None
@@ -474,6 +543,8 @@ def build(course_id, fill_elevation_opt=False):
             **({'elevationFixes': fixes} if fixes else {}),
             # Épaisseur du tracé (facultative) : remplace le réglage traceWidth de js/config.js
             **({'traceWidth': course['traceWidth']} if 'traceWidth' in course else {}),
+            # Départ et barrière horaire de l'arrivée (facultatifs)
+            **barriers,
             'stats': race_stats,
         },
         'branding': branding,
@@ -499,6 +570,12 @@ def summary(data, warnings):
         f"{len(data['track']['points'])} points GPS, {len(data['climbs'])} côtes ≥ {data['race']['minClimbLength']} m "
         f"(rouge {counts['rouge']}, orange {counts['orange']}, vert {counts['vert']}, < 4 % {counts['blanc']})",
         'Ravitaillements : ' + (', '.join(f"{a['name']} (km {a['km']})" for a in data['aidStations']) or 'aucun'),
+        *([f"Départ : {data['race']['start'].replace('T', ' à ')}"] if 'start' in data['race'] else []),
+        *(['Barrières horaires : ' + ', '.join(
+            f"{name} {b['time'][11:]} ({b['elapsed'] // 60} h {b['elapsed'] % 60:02d}, {b['speed']} km/h)"
+            for name, b in [(a['name'], a['cutoff']) for a in data['aidStations'] if 'cutoff' in a]
+            + ([('arrivée', data['race']['finishCutoff'])] if 'finishCutoff' in data['race'] else []))]
+          if any('cutoff' in a for a in data['aidStations']) or 'finishCutoff' in data['race'] else []),
         'Altitudes : ' + data['race']['elevationSource'] + ''.join(
             f"\n  corrigées km {f['fromKm']} → {f['toKm']} : {f['points']} point(s) interpolé(s) de {f['fromEle']} à {f['toEle']} m"
             for f in data['race'].get('elevationFixes', [])),

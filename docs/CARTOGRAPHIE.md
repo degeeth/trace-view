@@ -86,7 +86,7 @@ Elle émet `climb:select-num` quand on clique sur la pastille d'une côte.
 | Source | Type | Fournisseur | Zooms | Utilisée par |
 |---|---|---|---|---|
 | `openmaptiles` | vector | `tiles.openfreemap.org/planet` (OpenMapTiles) | 0 à 14 (surzoom au-delà) | Sentiers, Streets, Light, Dark, anciens styles |
-| `satellite` | raster 256 | Esri World Imagery | 0 à 19 | Satellite |
+| `satellite` | raster 256 | Esri World Imagery | 0 à 19 | Satellite (seulement si `commercialUse: false`) |
 | `spw-ortho` | raster 256 | SPW, export ArcGIS reprojeté en EPSG:3857, image 512 px | 10 à 19, limité à la Wallonie (`bounds`) | Satellite (par-dessus Esri) |
 | `osm` | raster 256 | `tile.openstreetmap.org` | 0 à 19 | OSM |
 | `topo` | raster 256 | `tile.opentopomap.org` | 0 à 17 | Topo (courbes) |
@@ -310,6 +310,7 @@ dans `MAP_STYLES`).
 
 | Réglage | Défaut | Effet |
 |---|---|---|
+| `commercialUse` | `true` | usage commercial (carte sur le site d'une organisation) : fonds OSM et Topo retirés, Satellite remplacé par « Photos » (orthophotos SPW et IGN sur le fond Sentiers, sans Esri), voir `docs/LICENCES.md` ; `false` : tous les fonds |
 | `defaultStyle` | `'sentiers'` | fond de carte au chargement (clé de `MAP_STYLES`) ; repli sur le premier fond si la clé n'existe pas |
 | `stylePanelCollapsed` | `true` | panneau « Fond de carte » replié au démarrage |
 | `traceWidth` | 1 | épaisseur du tracé : facteur appliqué à toutes ses couches (`trace-glow`, `trace-outline`, `trace-line`, `climbs-line`, `climb-hl-*`) ; une course peut le remplacer par `"traceWidth"` dans `course.json` (0,3 à 3) |

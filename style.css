@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&display=swap');
+/* Polices servies par l'application (scripts/fetch_fonts.py) : aucune requête vers Google (RGPD) */
+@import url('fonts/fonts.css');
 
 /* Tokens : voir DESIGN.md (Grand Trail des Lacs & Châteaux · Winter) */
 :root {
@@ -460,7 +461,7 @@ tbody tr.hidden { display: none; }
 .m3d-thumb-bright   { background: #f0ebe3; border: 1px solid #ddd; }
 .m3d-thumb-positron { background: #f5f4f1; border: 1px solid #ddd; }
 .m3d-thumb-dark      { background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%); }
-.m3d-thumb-satellite { background-image: url('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/10/346/527'); background-size: cover; background-position: center; border: 1px solid #555; }
+.m3d-thumb-satellite { background-image: url('https://geoservices.wallonie.be/arcgis/rest/services/IMAGERIE/ORTHO_LAST/MapServer/export?bbox=662351,6515839,667917,6521080&bboxSR=3857&imageSR=3857&size=96,96&format=jpg&f=image');   /* orthophoto SPW (Malmedy), licence ouverte */ background-size: cover; background-position: center; border: 1px solid #555; }
 .m3d-thumb-topo     { background: linear-gradient(135deg, #f0ede0 0%, #d6cfa8 35%, #b8c8a0 65%, #8fad7a 100%); border: 1px solid #bbb; }
 .m3d-topo-btn {
   margin-top: 6px;
@@ -792,6 +793,9 @@ tbody tr.hidden { display: none; }
 
 /* Mode embed iframe (?embed=1) */
 .embed-mode header, .embed-mode .stats-bar { display: none; }
+/* Ordinateur : le profil garde au moins 300 px (titre, onglets, barre des ravitaillements et une vraie courbe),
+   même dans une iframe basse (800 px sur le site d'une organisation) ; la carte prend le reste */
+@media (min-width: 769px) { .chart-card { min-height: 300px; } }
 
 /* Sans tableau des côtes (?table=0) : carte et profil seuls */
 .no-table .col-left, .no-table #climbs-reopen-btn, .no-table .mobile-nav { display: none !important; }
@@ -809,7 +813,10 @@ tbody tr.hidden { display: none; }
   header { padding: 10px 14px; flex-wrap: wrap; gap: 4px; }
   header h1 { font-size: 1em; }
   header > span { font-size: 0.75em; display: block; width: 100%; }
-  .stat { padding: 6px 12px; font-size: 0.68em; letter-spacing: .5px; }
+  /* Statistiques sur une seule ligne qui défile horizontalement : la carte garde sa hauteur */
+  .stats-bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .stats-bar::-webkit-scrollbar { display: none; }
+  .stat { flex-shrink: 0; padding: 6px 12px; font-size: 0.68em; letter-spacing: .5px; }
   .stat strong { font-size: 1em; }
 
   .mobile-nav {
@@ -852,6 +859,8 @@ tbody tr.hidden { display: none; }
   /* Carte + profil */
   .map-card { flex: 1; }
   .chart-card { flex: 0 0 210px; }
+  /* Profil Ravitaillements : la barre sous la courbe prend ≈ 80 px, la courbe garde sa hauteur */
+  .chart-card:has(.rv-mode) { flex-basis: 290px; }
   .card-title { padding: 7px 12px 5px; font-size: .75em; }
   .card-title .selection-info { display: none; }
   .profile-header { padding: 8px 12px 0; }
@@ -914,6 +923,14 @@ header h1 .icon { color: var(--gt-primary); vertical-align: -3px; margin-right: 
 }
 .aid-note { margin-top: 3px; font-size: 12px; font-style: italic; color: var(--gt-text-muted); }
 .rv-bar-supplies { display: flex; gap: 2px; color: var(--gt-text-muted); }
+/* Barrières horaires : dans la bulle du ravito et sous le profil */
+.aid-cutoff { display: flex; gap: 6px; align-items: flex-start; margin-top: 6px; padding: 5px 7px; font-size: 12px;
+  background: var(--gt-primary-soft); border-left: 3px solid var(--gt-primary); border-radius: var(--gt-radius); }
+.aid-cutoff .icon { flex-shrink: 0; margin-top: 2px; }
+.aid-cutoff span { display: block; color: var(--gt-text-muted); font-size: 11px; }
+.aid-legs { display: flex; flex-direction: column; margin-top: 6px; font-size: 11px; color: var(--gt-text-muted); }
+.rv-bar-cutoff { display: flex; align-items: center; gap: 2px; font-size: 10px; font-weight: 700; color: var(--gt-ink);
+  white-space: nowrap; }
 
 /* Style « Sentiers » (vignette) et anciens styles */
 .m3d-thumb-sentiers { background:

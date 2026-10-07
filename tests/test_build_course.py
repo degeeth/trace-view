@@ -264,5 +264,39 @@ class ElevationFixes(unittest.TestCase):
         self.assertEqual(pts[3]['ele'], 100.0)
 
 
+
+class TimeBarriers(unittest.TestCase):
+    """Départ, barrières horaires des ravitaillements et de l'arrivée (course.json)."""
+
+    def aid(self):
+        return [{'name': 'A', 'km': 12.0, 'cutoff': '11:00'}, {'name': 'B', 'km': 30.0, 'cutoff': '02:00'}]
+
+    def test_elapsed_time_and_minimum_speed(self):
+        warnings, aid = [], self.aid()
+        race = bc.time_barriers({'start': '2026-11-07T09:00', 'finishCutoff': '2026-11-08T06:00'}, aid, 60.0, warnings)
+        self.assertEqual(warnings, [])
+        self.assertEqual(race['start'], '2026-11-07T09:00')
+        self.assertEqual(aid[0]['cutoff'], {'time': '2026-11-07T11:00', 'elapsed': 120, 'speed': 6.0})
+        # heure avant le départ : le lendemain (course de nuit)
+        self.assertEqual(aid[1]['cutoff']['time'], '2026-11-08T02:00')
+        self.assertEqual(race['finishCutoff']['elapsed'], 21 * 60)
+
+    def test_cutoffs_without_start_are_ignored(self):
+        warnings, aid = [], self.aid()
+        self.assertEqual(bc.time_barriers({}, aid, 60.0, warnings), {})
+        self.assertEqual(len(warnings), 1)
+        self.assertNotIn('cutoff', aid[0])
+
+    def test_unordered_or_invalid_cutoffs_are_reported(self):
+        warnings = []
+        aid = [{'name': 'A', 'km': 12.0, 'cutoff': '13:00'}, {'name': 'B', 'km': 30.0, 'cutoff': '12:00'},
+               {'name': 'C', 'km': 40.0, 'cutoff': 'midi'}]
+        bc.time_barriers({'start': '2026-11-07T09:00'}, aid, 60.0, warnings)
+        # B (12h00, même jour) avant A (13h00) : signalé ; C illisible : signalé et ignoré
+        self.assertEqual(len(warnings), 2)
+        self.assertEqual(aid[1]['cutoff']['time'], '2026-11-07T12:00')
+        self.assertNotIn('cutoff', aid[2])
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -4,12 +4,13 @@ import { on, emit } from './bus.js';
 import { MAP_STYLES, zoomWidth } from './map-styles.js';
 import { PEAK_ICON } from './style-sentiers.js';
 import { MAP_CONFIG } from './config.js';
-import { CAT_COLORS, slopeColor, brandIconSvg, brandIconImage, brandIconColor, aidDetailsHtml, escapeHtml } from './race.js';
+import { CAT_COLORS, slopeColor, brandIconSvg, brandIconImage, brandIconColor, aidDetailsHtml, aidLegsHtml, escapeHtml, fmtClock } from './race.js';
 import { icon } from './icons.js';
 
 // Relief : Terrarium AWS (standard, zoom 14) ou Mapterhorn (qualité haute, zoom 17 : rochers, crêtes, ravins nets)
 const DEM = {
-  standard: { tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 14 },
+  standard: { tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 14,
+              attribution: 'Relief : <a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank">Mapzen Terrain Tiles</a> (SRTM, GMTED, AWS Open Data)' },
   high: { tiles: ['https://tiles.mapterhorn.com/{z}/{x}/{y}.webp'], tileSize: 512, maxzoom: 17,
           attribution: '<a href="https://mapterhorn.com/attribution" target="_blank">© Mapterhorn</a>' }
 };
@@ -18,7 +19,7 @@ const IGN_ORTHO = {
   type: 'raster', tileSize: 256, minzoom: 10, maxzoom: 19, bounds: [-5.3, 41.3, 9.7, 51.2],
   tiles: ['https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS'
     + '&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILECOL={x}&TILEROW={y}'],
-  attribution: '© IGN (orthophotos)'
+  attribution: '© <a href="https://geoservices.ign.fr" target="_blank">IGN</a>, BD ORTHO (Licence ouverte Etalab)'
 };
 const EMPTY = { type: 'FeatureCollection', features: [] };
 
@@ -218,7 +219,7 @@ export function createMap(race, { container }) {
   const aidGeo = {
     type: 'FeatureCollection',
     features: race.aidStations.map((a, i) => ({
-      type: 'Feature', properties: { name: a.name, km: a.km, idx: i },
+      type: 'Feature', properties: { name: a.name, km: a.km, idx: i, cutoff: a.cutoff ? fmtClock(a.cutoff.time) : '' },
       geometry: { type: 'Point', coordinates: [a.lng, a.lat] }
     }))
   };
@@ -259,10 +260,10 @@ export function createMap(race, { container }) {
             <span>${MAP_STYLES[k].label}</span>
           </button>`).join('')}
       </div>
-      <button class="m3d-style-thumb m3d-topo-btn" data-style="topo">
+      ${MAP_STYLES.topo ? `<button class="m3d-style-thumb m3d-topo-btn" data-style="topo">
         <span class="m3d-thumb-icon m3d-thumb-topo"></span>
         <span>${MAP_STYLES.topo.label}</span>
-      </button>
+      </button>` : ''}
       ${oldKeys.length ? `<div class="m3d-old-row" title="Anciens styles, bientôt retirés">
         <span class="m3d-old-label">Anciens</span>
         ${oldKeys.map(k => `<button class="m3d-style-thumb m3d-old-btn" data-style="${k}">${MAP_STYLES[k].label}</button>`).join('')}
@@ -324,7 +325,8 @@ export function createMap(race, { container }) {
     // Relief : la même source alimente l'ombrage (2D et 3D) et le terrain (3D)
     const highQuality = race.race.quality === 'high';
     map.addSource('dem', { type: 'raster-dem', encoding: 'terrarium', ...DEM[highQuality ? 'high' : 'standard'] });
-    if (highQuality && styleKey === 'satellite') {
+    // IGN : qualité haute, ou toujours en usage commercial (seules photos ouvertes en France, Esri retiré)
+    if ((highQuality || C.commercialUse) && styleKey === 'satellite') {
       map.addSource('ign-ortho', IGN_ORTHO);
       map.addLayer({ id: 'ign-ortho', type: 'raster', source: 'ign-ortho' }, 'spw-ortho');
     }
@@ -408,7 +410,8 @@ export function createMap(race, { container }) {
     map.addLayer({ id: 'aid-label', type: 'symbol', source: 'aid',
       layout: {
         'text-field': ['concat', ['get', 'name'], '\n',
-          ['number-format', ['get', 'km'], { locale: 'fr-BE', 'max-fraction-digits': 1 }], ' km'],
+          ['number-format', ['get', 'km'], { locale: 'fr-BE', 'max-fraction-digits': 1 }], ' km',
+          ['case', ['!=', ['get', 'cutoff'], ''], ['concat', '\nBarrière ', ['get', 'cutoff']], '']],
         'text-font': ['Noto Sans Bold'], 'text-size': 11, 'text-offset': [0, 1.7], 'text-anchor': 'top'
       },
       paint: { 'text-color': style.dark ? '#fff' : '#04080b', 'text-halo-color': halo, 'text-halo-width': 1.5 } });
@@ -433,7 +436,8 @@ export function createMap(race, { container }) {
   }
 
   function addContours(beforeId) {
-    map.addSource('contours-thick', { type: 'geojson', data: contourCache.thick || race.contours.thick });
+    const copernicus = 'Courbes : Copernicus DEM GLO-30, © DLR e.V. et © Airbus Defence and Space, fourni par l\'UE et l\'ESA (COPERNICUS)';
+    map.addSource('contours-thick', { type: 'geojson', data: contourCache.thick || race.contours.thick, attribution: copernicus });
     map.addSource('contours-thin', { type: 'geojson', data: contourCache.thin || EMPTY });
     const color = '#8d7154';
     const { thick, thin, labels } = C.contoursMinZoom;   // apparition en fondu juste après le zoom réglé
@@ -669,10 +673,11 @@ export function createMap(race, { container }) {
   });
   map.on('mouseleave', 'badges-circle', () => badgeTip.remove());
   map.on('click', 'aid-circle', e => {
-    const aid = race.aidStations[e.features[0].properties.idx];
+    const idx = e.features[0].properties.idx, aid = race.aidStations[idx];
     new maplibregl.Popup({ offset: 14, className: 'aid-popup' }).setLngLat(e.features[0].geometry.coordinates)
       .setHTML(`<b>${brandIconSvg(race, 'currentColor', 14)} Ravitaillement</b><br>${escapeHtml(aid.name)} · km ${aid.km.toLocaleString('fr-BE')}`
-        + aidDetailsHtml(aid, icon))
+        + aidDetailsHtml(aid, icon) + aidLegsHtml(race, idx)
+        + (aid.supplies?.length ? '' : '<div class="aid-note">Contenu non communiqué</div>'))
       .addTo(map);
   });
 

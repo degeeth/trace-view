@@ -94,8 +94,10 @@ courses/<id>/course.json + <fichier>.gpx ──► scripts/build_course.py <id> 
 | `id` | identifiant court (nom du dossier, de l'URL et du fichier de données) |
 | `gpx` | fichier GPX placé dans le même dossier |
 | `branding` | identité visuelle, fichier `branding/<nom>.json` (couleurs du tracé, icône des ravitaillements) ; `defaut` si absent |
-| `aidStations` | ravitaillements : **km**, **coordonnées**, ou les deux (le script calcule ce qui manque) ; facultatifs : `supplies` (contenu, voir ci-dessous) et `note` |
+| `aidStations` | ravitaillements : **km**, **coordonnées**, ou les deux (le script calcule ce qui manque) ; facultatifs : `supplies` (contenu, voir ci-dessous), `note` et `cutoff` (barrière horaire, `"11:15"` : le jour du départ, ou le lendemain si l'heure est avant le départ ; date complète pour une course de plusieurs jours). Le script calcule le temps de course et la vitesse moyenne minimale |
 | `detection` | facultatif : longueur minimale d'une côte (m), tolérance au bruit GPS (m), lissage (points) |
+| `start` | facultatif : départ, `"2026-11-07T09:00"` ; nécessaire aux barrières horaires, affiché dans l'en-tête |
+| `finishCutoff` | facultatif : barrière horaire de l'arrivée (`"20:00"`, ou date complète `"2026-11-08T06:00"`) ; affichée comme temps limite |
 | `elevationFixes` | facultatif : altitudes fausses du GPX (paliers, sauts) interpolées entre deux km, `[{ "fromKm": 3.03, "toKm": 4.06 }]` ; le GPX n'est pas modifié |
 | `terrainExaggeration` | facultatif : exagération du relief en 3D (1 à 5), remplace celle du fond de carte ; 2,5 pour un relief doux comme les Ardennes, absent en montagne |
 | `quality` | facultatif : `"high"` pour une carte plus détaillée (relief Mapterhorn jusqu'au zoom 17, orthophotos IGN en France sur le fond Satellite) ; `"standard"` par défaut. Recommandé en montagne, plus lourd à charger |
@@ -137,7 +139,7 @@ Chacune a son `DESIGN.md` dans le dossier de sa course de référence.
 | `primary`, `onPrimary` | couleur d'accent (onglets actifs, filets, sélection) et texte posé dessus |
 | `ink`, `night`, `nightHover` | encre, fond de l'en-tête et des en-têtes de tableau, survol |
 | `radius` | arrondi des boutons et panneaux (`0` = angles droits, `6px` = doux) |
-| `font`, `fontDisplay`, `googleFonts` | police du texte, du nom de la course, et familles Google Fonts à charger |
+| `font`, `fontDisplay`, `googleFonts` | police du texte, du nom de la course, et familles Google Fonts utilisées ; après l'ajout d'une famille, lancer `python3 scripts/fetch_fonts.py` : les polices sont servies par l'application (`fonts/`), jamais chargées depuis Google |
 | `aidIconColor` | couleur de l'icône des ravitaillements sur sa pastille blanche (défaut : encre) |
 
 `headerLogo: true` (au niveau de l'identité) affiche l'icône de l'organisation dans l'en-tête, à côté du titre,

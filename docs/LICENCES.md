@@ -26,6 +26,13 @@ Légende : ✅ utilisable tel quel (avec attribution) · ⚠️ utilisable avec 
 
 ## 2. Ce qu'il faut corriger avant un usage commercial
 
+**Fait** (octobre 2026, réglage `commercialUse: true` dans `js/config.js`) : Esri, OSM et OpenTopoMap retirés
+(fond « Photos » : orthophotos SPW et IGN sur Sentiers, vignette SPW), attributions complètes (Terrarium,
+Copernicus, SPW avec lien, IGN, Esri hors mode commercial), polices servies par l'application
+(`scripts/fetch_fonts.py`). Restent : Mapterhorn (§2.3), OpenFreeMap sans garantie (§2.6), et MapLibre et
+Chart.js chargés depuis des CDN (jsDelivr, cdnjs), à héberger aussi pour qu'aucune requête ne quitte le site.
+
+
 1. **Satellite (Esri)** : retirer du produit vendu, ou le remplacer. Pistes : orthophotos SPW (Wallonie) et IGN
    (France) seules, gratuites et autorisées ; ailleurs, un fournisseur payant (MapTiler, Stadia Maps…).
    Les courses actuelles sont en Wallonie et en France : SPW + IGN les couvrent.

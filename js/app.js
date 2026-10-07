@@ -1,6 +1,6 @@
 // ── Point d'entrée : charge la course et relie carte, profil et tableau ──
 import { on, emit } from './bus.js';
-import { loadRace, brandIconSvg, brandIconBox } from './race.js';
+import { loadRace, brandIconSvg, brandIconBox, fmtClock, fmtDuration } from './race.js';
 import { createMap } from './map.js';
 import { createChart } from './chart.js';
 import { createTable } from './table.js';
@@ -36,12 +36,7 @@ Object.entries(THEME_VARS).forEach(([key, cssVar]) => {
   if (theme[key]) document.documentElement.style.setProperty(cssVar, theme[key]);
 });
 document.documentElement.style.setProperty('--gt-trace', race.branding.traceColor);
-if (theme.googleFonts) {
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = `https://fonts.googleapis.com/css2?${theme.googleFonts}&display=swap`;
-  document.head.appendChild(link);
-}
+// Polices des identités : servies par l'application (fonts/fonts.css, scripts/fetch_fonts.py), pas par Google
 
 // ── En-tête et statistiques ──
 const { name, subtitle, gpxFile, stats, minClimbLength } = race.race;
@@ -60,7 +55,11 @@ $('#race-subtitle').textContent = `${subtitle} · Source : ${gpxFile}${elevation
 $('.stats-bar').innerHTML = [
   [stats.distance, 'Distance'], [stats.dplus, 'Dénivelé +'], [stats.dminus, 'Dénivelé −'],
   [stats.altMin, 'Alt. min'], [stats.altMax, 'Alt. max'], [stats.altMoy, 'Alt. moy'],
-  [race.climbs.length, `Côtes ≥ ${minClimbLength} m`]
+  [race.climbs.length, `Côtes ≥ ${minClimbLength} m`],
+  // Départ et temps limite (barrière horaire de l'arrivée), si la course les indique
+  ...(race.race.start ? [[new Date(race.race.start).toLocaleDateString('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' })
+    + ' ' + fmtClock(race.race.start), 'Départ']] : []),
+  ...(race.race.finishCutoff ? [[fmtDuration(race.race.finishCutoff.elapsed), 'Temps limite']] : [])
 ].map(([v, l]) => `<div class="stat"><strong>${v}</strong>${l}</div>`).join('');
 
 // ── Sélecteur de course (visible à partir de deux courses) ──

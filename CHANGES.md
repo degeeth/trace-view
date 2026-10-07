@@ -935,3 +935,33 @@ README, skill
   l'altitude brute (+740 m) est bruitée
 - 6 côtes ≥ 300 m (rouge 1, orange 1, vert 2, < 4 % 2), dont 0,51 à 1,82 km : +165 m à 12,6 %
 - Identité Extratrail (comme Stoumont), relief 3D ×2,5, qualité standard, courbes de niveau, sans ravitaillement
+
+---
+
+## 51. Barrières horaires, ravitaillements du GT65, version commerciale, démo GTLC
+
+**Fichiers** : `scripts/build_course.py`, `scripts/fetch_fonts.py`, `fonts/`, `tests/test_build_course.py`,
+`tests/smoke.mjs`, `courses/gtlc-65-2024/course.json`, `data/gtlc-65-2024.json`, `js/race.js`, `js/map.js`,
+`js/map-styles.js`, `js/chart.js`, `js/app.js`, `js/icons.js`, `js/config.js`, `style.css`, `index.html`,
+`README.md`, `docs/CARTOGRAPHIE.md`, `docs/LICENCES.md`, `docs/BACKLOG.md`,
+`.claude/skills/add-course/SKILL.md`
+
+- **Barrières horaires** : `start`, `finishCutoff` et `aidStations[].cutoff` dans `course.json` ; le script
+  calcule l'heure (lendemain si avant le départ), le temps de course et la vitesse moyenne minimale, et signale
+  les barrières illisibles, sans départ ou dans le désordre. Affichage : bulle du ravito, libellé sur la carte
+  (« Barrière 11h15 »), barre sous le profil (icône minuteur), en-tête (départ, temps limite). 3 tests unitaires
+- **Bulle des ravitaillements** : distance et D+ depuis le point précédent et jusqu'au suivant, « Contenu non
+  communiqué » quand il n'est pas connu
+- **GT65** : 4 ravitaillements placés par coordonnées depuis la carte Tracedetrail de l'organisation (Bévercé,
+  Mont, Moviemills, barrage de Robertville) et barrières 2026 (11h15, 12h25, 14h20, 17h20, arrivée 20h00 ;
+  départ samedi 7 novembre 2026 à 9h00) sur la trace 2024
+- **Version commerciale** (`commercialUse: true`) : plus d'Esri (fond « Photos » : orthophotos SPW et IGN sur
+  Sentiers, vignette SPW), plus d'OSM ni d'OpenTopoMap, attributions complétées (Terrarium, Copernicus, SPW avec
+  lien, IGN) ; vérifié : aucune requête vers Esri, OSM, OpenTopoMap ou Google
+- **Polices** servies par l'application : `scripts/fetch_fonts.py` télécharge les familles du style de base et
+  des identités (16 fichiers woff2, 345 Ko, licence OFL) dans `fonts/`
+- **Profil** : au moins 300 px sur ordinateur et 290 px sur mobile en mode Ravitaillements (la courbe était
+  écrasée dans une iframe de 800 px) ; barre des ravitaillements recalculée à chaque changement de taille
+  (`ResizeObserver`), elle était entassée à gauche quand le profil était construit masqué (onglet Carte mobile)
+- **Démo** `demo-comparaison-gt65.html` : carte actuelle du GTLC (Tracedetrail) et proposition côte à côte (page locale, non versionnée, comme `demo-grandtrail-gt65.html`)
+- Backlog : parcours sur smartphone (à analyser), libellés serrés sur mobile, points de contrôle sans ravito

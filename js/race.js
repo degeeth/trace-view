@@ -116,13 +116,44 @@ export function suppliesByCategory(aid) {
 // « Boisson isotonique (Naak) », « Naak » si pas de libellé
 export const supplyText = s => [s.label, s.brand && (s.label ? `(${s.brand})` : s.brand)].filter(Boolean).join(' ');
 
-// Détail d'un ravitaillement (contenu, marques, note) en HTML ; `icon` vient de js/icons.js
+// ── Barrières horaires (data : { time: "2026-11-07T11:15", elapsed: minutes, speed: km/h }) ──
+const asDate = iso => new Date(iso);   // heure locale de la course, sans fuseau
+export const fmtClock = iso => { const d = asDate(iso); return `${d.getHours()}h${String(d.getMinutes()).padStart(2, '0')}`; };
+export const fmtDay = iso => asDate(iso).toLocaleDateString('fr-BE', { weekday: 'long' });
+export const fmtDuration = min => `${Math.floor(min / 60)} h${min % 60 ? ' ' + String(min % 60).padStart(2, '0') : ''}`;
+export const fmtSpeed = v => v.toLocaleString('fr-BE', { maximumFractionDigits: 1 });
+// « samedi 11h15 · 2 h 15 après le départ · 5,7 km/h de moyenne minimum »
+export function cutoffText(c) {
+  return [`${fmtDay(c.time)} ${fmtClock(c.time)}`, `${fmtDuration(c.elapsed)} après le départ`,
+    c.speed ? `${fmtSpeed(c.speed)} km/h de moyenne minimum` : null].filter(Boolean).join(' · ');
+}
+export function cutoffHtml(c, icon) {
+  return `<div class="aid-cutoff">${icon('timer', 12)}<div><b>Barrière horaire : ${fmtDay(c.time)} ${fmtClock(c.time)}</b>`
+    + `<span>${fmtDuration(c.elapsed)} après le départ${c.speed ? ` · ${fmtSpeed(c.speed)} km/h de moyenne minimum` : ''}</span></div></div>`;
+}
+
+// Tronçons autour du ravitaillement i : depuis le point précédent (départ ou ravito) et jusqu'au suivant
+export function aidLegs(race, i) {
+  const pts = [{ name: 'départ', km: 0 }, ...race.aidStations, { name: 'arrivée', km: race.totalKm }];
+  const dplusAt = km => race.cumDplus[race.idxAtKm(km)];
+  const leg = (a, b) => ({ name: b.name, km: b.km - a.km, dplus: Math.round(dplusAt(b.km) - dplusAt(a.km)) });
+  const here = pts[i + 1];
+  return { from: { ...leg(pts[i], here), name: pts[i].name }, to: leg(here, pts[i + 2]) };
+}
+const fmtKm = km => km.toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+export function aidLegsHtml(race, i) {
+  const { from, to } = aidLegs(race, i);
+  return `<div class="aid-legs"><span>Depuis ${escapeHtml(from.name)} : <b>${fmtKm(from.km)} km</b> · +${from.dplus} m</span>`
+    + `<span>Jusqu'à ${escapeHtml(to.name)} : <b>${fmtKm(to.km)} km</b> · +${to.dplus} m</span></div>`;
+}
+
+// Détail d'un ravitaillement (barrière horaire, contenu, marques, note) en HTML ; `icon` vient de js/icons.js
 export function aidDetailsHtml(aid, icon) {
-  const parts = suppliesByCategory(aid).map(([cat, items]) => {
+  const parts = (aid.cutoff ? [cutoffHtml(aid.cutoff, icon)] : []).concat(suppliesByCategory(aid).map(([cat, items]) => {
     const texts = items.map(supplyText).filter(Boolean);
     return `<div class="aid-supply-row"><span class="aid-chip">${icon(SUPPLIES[cat].icon, 12)} ${SUPPLIES[cat].label}</span>`
       + (texts.length ? `<span class="aid-supply-items">${texts.map(escapeHtml).join(', ')}</span>` : '') + '</div>';
-  });
+  }));
   if (aid.note) parts.push(`<div class="aid-note">${escapeHtml(aid.note)}</div>`);
   return parts.join('');
 }

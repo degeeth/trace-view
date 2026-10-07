@@ -27,7 +27,8 @@ Ask for whatever is not already known (a single grouped question):
 | Identifier | yes | short lowercase slug: `lgo100km`, `gtlc-winter-35` |
 | Display name | yes | « La Grande Ourthe 100km » |
 | Visual identity | no | existing identity (`gtlc`…) or a new one (`branding/<name>.json`): colours + **aid station icon**. Ask whether the organiser has its own icon (logo, SVG); otherwise leave it out and the default **knife and fork** icon applies. No identity given: `defaut` |
-| Aid stations | no | name + **km** (simplest, usually given by the organiser) **or** name + coordinates, or both; for each one, also ask for its **contents** (products, with their category and brand) if known |
+| Aid stations | no | name + **km** (simplest, usually given by the organiser) **or** name + coordinates, or both; for each one, also ask for its **contents** (products, with their category and brand) and its **time barrier** if known |
+| Start and time limit | no | start date and time (`"start": "2026-11-07T09:00"`), required for time barriers; finish time barrier (`"finishCutoff": "20:00"`); barriers per aid station (`"cutoff": "11:15"`) |
 | Detection thresholds | no | defaults: climbs ≥ 300 m, tolerance 8 m, smoothing 5 points; only change on request |
 | Display quality | no | **always offer it** (see « High quality » below), default `standard` |
 | 3D relief exaggeration | no | `terrainExaggeration` (1 to 5): propose **2.5** for gentle relief (Ardennes, hills: valleys stand out), leave it out in the mountains (background default ×1.5, stronger looks caricatural) |
@@ -122,7 +123,8 @@ Visual identity `branding/<name>.json`:
 `aidStationIcon` is optional (default: knife and fork). A provided icon is a filled shape (vectorised logo,
 like the GTLC deer or the Coureurs Célestes sole print) by default; add `"style": "stroke"` for a line icon.
 Optional `theme` adapts the whole interface to the organiser (keys: `primary`, `onPrimary`, `ink`, `night`,
-`nightHover`, `radius`, `font`, `fontDisplay`, `googleFonts`, `aidIconColor`; see README). `"headerLogo": true`
+`nightHover`, `radius`, `font`, `fontDisplay`, `googleFonts`, `aidIconColor`; see README; a new `googleFonts`
+family requires `python3 scripts/fetch_fonts.py`: fonts are served by the app, never by Google). `"headerLogo": true`
 shows the organiser's icon next to the title instead of the mountain. When the user gives
 the organiser's website, offer to write a `courses/<id>/DESIGN.md` from it and derive the identity from it
 (example: `branding/coureurs-celestes.json`).

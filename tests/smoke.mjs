@@ -79,7 +79,9 @@ try {
   check('Sélecteur de course', picker.count > 1 ? picker.visible && picker.value === picker.id : !picker.visible,
     `${picker.count} course(s)`);
   check('En-tête et statistiques générés', await page.$eval('#race-name', el => el.textContent.length > 0)
-    && await page.$$eval('.stats-bar .stat', s => s.length) === 7);
+    // 7 statistiques, plus le départ et le temps limite si la course les indique
+    && await page.$$eval('.stats-bar .stat', s => s.length)
+      === 7 + await page.evaluate(() => !!trace.race.race.start + !!trace.race.race.finishCutoff));
   check('Carte chargée', await page.evaluate(() => trace.map.loaded()));
   // Réglages de js/config.js réellement appliqués
   const cfg = await page.evaluate(async () => {
@@ -160,7 +162,9 @@ try {
     `inclinaison ${state3d.pitch}°`);
 
   // Changements de fond : surbrillance, icône et relief conservés
-  for (const key of ['topotrail', 'terrain', 'satellite', 'positron', 'dark', 'osm', 'sentiers']) {
+  // Tous les fonds proposés (selon le réglage commercialUse), en finissant par Sentiers
+  const styleKeys = await page.$$eval('.m3d-style-thumb', els => els.map(e => e.dataset.style).filter(k => k !== 'sentiers'));
+  for (const key of [...styleKeys, 'sentiers']) {
     await page.evaluate(k => new Promise(resolve => {
       trace.map.once('style.load', () => trace.map.once('idle', resolve));
       document.querySelector(`.m3d-style-thumb[data-style="${k}"]`).click();
