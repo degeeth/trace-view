@@ -18,14 +18,30 @@ if (params.get('embed') === '1') document.body.classList.add('embed-mode');
 if (params.get('table') === '0') document.body.classList.add('no-table');
 hydrateIcons();
 
-// Chargement : pastille « Chargement du parcours… » si l'attente dure (même style que le passage 2D ↔ 3D),
-// jusqu'à ce que la carte soit dessinée
+// Chargement : la page reste masquée (classe page-loading posée dans index.html) derrière la pastille
+// « Chargement… », jusqu'à ce que la carte soit dessinée ; elle apparaît alors d'un bloc, déjà aux couleurs et au
+// logo de la course. Venant de la page d'accueil, la pastille de la tuile continue sans délai ni changement de texte.
 const loader = $('#page-loader');
+const label = loader.querySelector('[role="status"]');
+try {
+  const opening = sessionStorage.getItem('trace-view:opening');
+  sessionStorage.removeItem('trace-view:opening');
+  if (opening) { label.textContent = `Chargement de ${opening}…`; label.style.setProperty('--fade-label-delay', '0ms'); }
+} catch { /* stockage indisponible : pastille après 300 ms */ }
 loader.hidden = false;
+let revealed = false;
+function reveal() {
+  if (revealed) return;
+  revealed = true;
+  loader.hidden = true;
+  document.documentElement.classList.remove('page-loading');
+  document.documentElement.classList.add('page-ready');
+}
 let race;
 try {
   race = await loadRace(`data/${raceId}.json`);
 } catch (err) {
+  reveal();
   document.body.innerHTML = `<p class="load-error">Impossible de charger la course « ${raceId} » : ${err.message}`
     + ` · <a href="${location.pathname}">Tous les parcours</a></p>`;
   throw err;
@@ -100,7 +116,8 @@ function selectFromHash() {
   if (m) emit('climb:select-num', parseInt(m[1], 10));
 }
 mapApi.map.once('load', selectFromHash);
-mapApi.map.once('load', () => { loader.hidden = true; });
+mapApi.map.once('load', reveal);
+setTimeout(reveal, 20000);   // carte jamais chargée (WebGL indisponible…) : la page s'affiche quand même
 window.addEventListener('hashchange', selectFromHash);
 
 $('#share-btn').addEventListener('click', () => {

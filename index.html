@@ -10,8 +10,11 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css"/>
   <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
 
-  <link rel="stylesheet" href="style.css?v=29"/>
-  <script type="module" src="js/app.js?v=40"></script>
+  <!-- Page d'un parcours : masquée dès le premier affichage jusqu'à ce qu'elle soit complète (données, identité,
+       carte), pour ne jamais montrer l'interface vide ni le logo et les couleurs par défaut (js/course.js) -->
+  <script>if (new URLSearchParams(location.search).get('course')) document.documentElement.classList.add('page-loading');</script>
+  <link rel="stylesheet" href="style.css?v=31"/>
+  <script type="module" src="js/app.js?v=41"></script>
 </head>
 <body>
 
@@ -28,6 +31,17 @@
 <div id="page-loader" class="page-loader" hidden>
   <div class="map-crossfade-label" role="status">Chargement du parcours…</div>
 </div>
+<script>
+  // Dès le premier affichage (avant les modules) : nom du parcours choisi sur la page d'accueil, pastille immédiate
+  try {
+    const opening = sessionStorage.getItem('trace-view:opening');
+    if (opening && document.documentElement.classList.contains('page-loading')) {
+      const label = document.querySelector('#page-loader [role="status"]');
+      label.textContent = `Chargement de ${opening}…`;
+      label.style.setProperty('--fade-label-delay', '0ms');
+    }
+  } catch { /* stockage indisponible */ }
+</script>
 
 <div class="stats-bar"></div>
 

@@ -1005,3 +1005,16 @@ README, skill
   des identités du catalogue)
 - Test de fumée : page d'accueil (une tuile par parcours, ouverture d'un parcours) et lien de retour ; sans
   `--course`, la première course du catalogue
+
+---
+
+## 54. Ouverture d'un parcours sans interface vide
+
+**Fichiers** : `index.html`, `js/course.js`, `js/dashboard.js`, `style.css`
+
+- La page d'un parcours est masquée dès le premier affichage (classe `page-loading` posée dans `index.html`, avant
+  les modules) et n'apparaît, en fondu, qu'une fois complète : données, couleurs et logo de l'organisation, carte
+  dessinée. Plus d'en-tête vide, ni de montagne et de couleurs par défaut remplacées ensuite par l'identité
+- Fond uni et pastille « Chargement… » à la place ; venant de la page d'accueil, la pastille de la tuile
+  (« Chargement de Ohm Trail 2018… ») continue sans délai ni changement de texte
+- Sécurité : page affichée au bout de 20 s si la carte ne se charge pas ; affichée aussitôt en cas d'erreur

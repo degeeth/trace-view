@@ -80,6 +80,8 @@ $('#dashboard').addEventListener('click', e => {
   if (!a || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
   loader.querySelector('[role="status"]').textContent = `Chargement de ${a.dataset.name}…`;
   loader.hidden = false;
+  // La page du parcours reprend cette pastille dès son premier affichage (js/course.js)
+  try { sessionStorage.setItem('trace-view:opening', a.dataset.name); } catch { /* sans stockage : pastille différée */ }
 });
 // Retour arrière (page restaurée depuis le cache du navigateur) : plus de pastille
 window.addEventListener('pageshow', e => { if (e.persisted) loader.hidden = true; });

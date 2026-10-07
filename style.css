@@ -893,6 +893,12 @@ header h1 .icon { color: var(--gt-primary); vertical-align: -3px; margin-right: 
 }
 .page-loader[hidden] { display: none; }
 @keyframes page-loader-veil { to { background: rgba(244, 244, 244, .7); } }
+/* Page d'un parcours en chargement : contenu masqué (mais mis en page : carte et profil gardent leur taille),
+   fond uni sous la pastille ; puis apparition en fondu */
+html.page-loading body > :not(#page-loader) { visibility: hidden; }
+html.page-loading .page-loader, html.page-loading .page-loader[hidden] { display: flex; background: var(--gt-surface-soft); animation: none; }
+html.page-ready body > :not(#page-loader) { animation: page-reveal 250ms ease-out; }
+@keyframes page-reveal { from { opacity: 0; } }
 
 /* ── Page d'accueil : tuiles des parcours, regroupées par organisation ── */
 body.dashboard-mode { height: auto; min-height: 100vh; overflow: auto; display: block; }
