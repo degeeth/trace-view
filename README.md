@@ -16,6 +16,8 @@ Course de référence : **La Grande Ourthe 100km** (100,2 km, +3 408 m, 44 côte
   Ravitaillements, info-bulle (altitude, pente, D+ cumulé), zoom automatique sur la côte sélectionnée.
 - **Tout est relié** : cliquer une côte la met en avant partout (en 3D, la caméra se place face à la pente) ;
   survoler le profil déplace un curseur sur la carte.
+- **Survol 3D** (bouton « Survol ») : la caméra suit le tracé du départ à l'arrivée (ou la côte sélectionnée),
+  le curseur du profil avance en même temps ; bouton « Arrêter » ou toute action sur la carte pour reprendre la main.
 - **Partage** : lien direct vers une côte (`#climb-12`), export GPX, mode intégrable (`?embed=1`).
 - **Plusieurs courses** : `index.html` sans paramètre est la page d'accueil, une tuile par parcours (logo et couleurs de l'organisation), regroupées par organisation ou par `group` ; une tuile ouvre `index.html?course=<id>`, le lien « Tous les parcours » y ramène.
 - **Mobile** : même page, onglets Carte / Côtes.
@@ -248,6 +250,7 @@ js/
   course.js              page d'une course : chargement, en-tête, sélection, partage, GPX, onglets mobiles
   race.js                chargement des données, pentes, couleurs des catégories
   map.js                 carte MapLibre 2D/3D : couches, panneau des fonds, curseur, surbrillance
+  flyover.js             survol 3D du parcours (caméra qui suit le tracé)
   map-styles.js          fonds de carte
   chart.js               profil altimétrique (Chart.js)
   table.js               tableau, filtres, tri, mini-profil
@@ -284,7 +287,7 @@ Les modules ne s'appellent pas directement : ils communiquent par événements (
 | `climb:select` | côte ou `null` | tableau, carte, URL → carte, profil, tableau, en-tête |
 | `climb:select-num` | n° de côte | pastilles de la carte, lien `#climb-n` → app |
 | `trace:mode` | `climbs`, `slope`, `none`, `ravitaillements` | onglets du profil, panneau de la carte → carte, profil |
-| `cursor:move` / `cursor:stop` | km | profil → carte, profil |
+| `cursor:move` / `cursor:stop` | km | profil, survol 3D → carte, profil |
 
 Dans la console du navigateur, `window.trace` donne accès à la course, à la carte et au profil (débogage, tests).
 
@@ -292,12 +295,12 @@ Dans la console du navigateur, `window.trace` donne accès à la course, à la c
 
 ```bash
 npm run test:build                         # 18 tests unitaires : côtes, statistiques, ravitaillements, altitudes
-npm run test:smoke                         # 24 vérifications dans Chrome headless (ordinateur + mobile)
+npm run test:smoke                         # 34 vérifications dans Chrome headless (ordinateur + mobile)
 npm run test:smoke -- --course <id>        # sur une course précise
 ```
 
 Le test de fumée utilise Chrome installé sur la machine (chemin macOS par défaut, sinon variable `CHROME_PATH`).
-Il vérifie notamment : tableau, modes du tracé, curseur, sélection et zoom du profil, 3D, changements de fond,
+Il vérifie notamment : tableau, modes du tracé, curseur, sélection et zoom du profil, 3D, survol 3D, changements de fond,
 lien partagé, page d'accueil (tuiles, ouverture d'un parcours) et lien de retour, cohérence du D+, affichage mobile,
 absence d'erreur JavaScript.
 

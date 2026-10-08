@@ -555,6 +555,19 @@ tbody tr.hidden { display: none; }
   color: var(--gt-on-primary);
   border-color: var(--gt-primary);
 }
+/* Bouton « Survol » (survol 3D, js/flyover.js) : plein pendant le vol, quand il devient « Arrêter » */
+.btn-flyover.active { background: var(--gt-primary); color: var(--gt-on-primary); }
+/* Mobile : icône seule (libellé dans aria-label), pour tenir sur la ligne avec 3D, GPX et Partager */
+@media (max-width: 768px) {
+  .btn-flyover { padding: 3px 7px; }
+  .btn-flyover .btn-label { display: none; }
+}
+/* Ordinateur : en-tête de la carte sur une seule ligne (nom de la côte tronqué), sinon sa hauteur change avec la
+   sélection ou le bouton 3D et redimensionne la carte (« moveend » parasite) */
+@media (min-width: 769px) {
+  .map-card .card-title .title-with-icon { flex-wrap: nowrap; white-space: nowrap; min-width: 0; }
+  #map-info { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+}
 
 .chart-wrap {
   flex: 1;

@@ -13,8 +13,8 @@
   <!-- Page d'un parcours : masquée dès le premier affichage jusqu'à ce qu'elle soit complète (données, identité,
        carte), pour ne jamais montrer l'interface vide ni le logo et les couleurs par défaut (js/course.js) -->
   <script>if (new URLSearchParams(location.search).get('course')) document.documentElement.classList.add('page-loading');</script>
-  <link rel="stylesheet" href="style.css?v=34"/>
-  <script type="module" src="js/app.js?v=49"></script>
+  <link rel="stylesheet" href="style.css?v=35"/>
+  <script type="module" src="js/app.js?v=50"></script>
 </head>
 <body>
 
@@ -85,6 +85,7 @@
       <div class="card-title">
         <span class="title-with-icon"><i data-icon="route"></i> Tracé du parcours <span class="selection-info" id="map-info"></span></span>
         <div class="card-actions">
+          <button id="flyover-btn" class="btn-action btn-flyover" title="Survol 3D du parcours" aria-label="Survol 3D du parcours"><i data-icon="play" data-size="13"></i> <span class="btn-label">Survol</span></button>
           <button id="btn-3d" class="btn-3d-toggle" title="Vue 3D du relief" aria-pressed="false">3D</button>
           <button id="gpx-btn" class="btn-action" title="Télécharger le tracé GPX"><i data-icon="download" data-size="13"></i> GPX</button>
           <button id="share-btn" class="btn-action" title="Copier le lien vers cette côte" hidden><i data-icon="link" data-size="13"></i> Partager</button>

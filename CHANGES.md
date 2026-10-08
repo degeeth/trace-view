@@ -1069,3 +1069,29 @@ README, skill
   sur les pastilles blanches)
 - Crédits de la carte raccourcis (« Relief : Mapzen », « Courbes : Copernicus DEM © DLR, Airbus DS (UE, ESA) », avec
   liens) : ils couvraient trois lignes du bas de la carte
+
+---
+
+## 58. Survol 3D du parcours (façon Relive)
+
+**Fichiers** : `js/flyover.js` (nouveau), `js/course.js`, `js/map.js`, `js/config.js`, `js/icons.js`, `index.html`,
+`style.css`, `tests/smoke.mjs`, `docs/CARTOGRAPHIE.md`, `README.md`
+
+- Bouton « Survol » dans l'en-tête de la carte : passage en 3D si besoin (fondu habituel), mise en place de la caméra
+  en douceur, puis la caméra suit le tracé du départ à l'arrivée, inclinée à 60° derrière le point courant et tournée
+  vers la suite du parcours ; le curseur du profil et le marqueur de la carte avancent en même temps (`cursor:move`)
+- Côte sélectionnée : survol de cette côte seule, plus lent (8 s par km, entre 12 s et 1 min) ; sinon toute la course,
+  2 s par km entre 30 s et 2 min, avec accélération au départ et ralentissement à l'arrivée
+- Caméra au zoom 15,5, centre de la vue 80 m devant le point courant ; cap vers le centre de gravité des 500 m
+  suivants, lissé (1,5 s) : pas d'à-coup dans les lacets
+- Chemin rééchantillonné une fois (un point tous les 15 m) : une image ne coûte qu'un `jumpTo`, même sur les 18 322
+  points de l'Ohm Trail ; mesure de la pente du relief (tracé aminci) suspendue pendant le vol, relancée à la fin
+- Pendant le vol, le bouton devient « Arrêter » ; toute action sur la carte (souris, doigt, molette, clavier), le
+  bouton 2D/3D ou le choix d'une côte arrêtent le survol là où il est. À l'arrivée, la carte reste en 3D et recadre
+  toute la course (ou la côte) en douceur. Jamais lancé automatiquement
+- Mobile : bouton réduit à son icône (libellé dans `aria-label`), sur la même ligne que 3D, GPX et Partager
+- Ordinateur : en-tête de la carte sur une seule ligne (nom de la côte tronqué) ; avec le nouveau bouton, il passait
+  sur deux lignes selon la côte ou l'état du bouton 3D, ce qui redimensionnait la carte pendant la bascule en 3D
+- Curseur de la carte interpolé entre les deux points GPS qui encadrent le km (il sautait de point en point)
+- Réglages `flyover*` dans `js/config.js` ; test de fumée : survol lancé depuis la 2D, caméra inclinée qui avance,
+  curseur du profil, arrêt par le bouton et par une action sur la carte

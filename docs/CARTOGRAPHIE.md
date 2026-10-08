@@ -68,6 +68,7 @@ sans étape de compilation.
 | `js/race.js` | chargement de `data/<id>.json`, coordonnées `[lng, lat, alt]`, pentes, icône des ravitaillements |
 | `js/bus.js` | événements entre modules (la carte ne connaît ni le tableau ni le profil) |
 | `js/config.js` | réglages de la carte (`MAP_CONFIG`), modifiables sans toucher au reste du code |
+| `js/flyover.js` | survol 3D du parcours (bouton « Survol ») : caméra qui suit le tracé, curseur du profil synchronisé |
 
 La carte réagit aux événements du bus :
 
@@ -251,6 +252,21 @@ rendu, trop coûteux image par image ; il n'est rappelé qu'en fin d'animation.
 Vol vers une côte en 3D : cap calculé du début au sommet de la côte (`bearingBetween`), cadrage par
 `cameraForBounds` avec ce cap, puis `flyTo` à `climbFlightPitch` (60°) d'inclinaison.
 
+**Survol 3D** (bouton « Survol », `js/flyover.js`, façon Relive) : la caméra suit le tracé du départ à l'arrivée,
+ou la côte sélectionnée seule (plus lentement). Passage en 3D si besoin (`setMode3D`, fondu compris), mise en place
+de la caméra en douceur (`easeTo`, `flyoverIntroDuration`), puis une image par `requestAnimationFrame` : `jumpTo`
+derrière le point courant, inclinée de `flyoverPitch`, au zoom `flyoverZoom`, et `cursor:move` avec le km courant
+(curseur du profil et marqueur de la carte, interpolé entre deux points GPS). Le chemin suivi est rééchantillonné
+une fois au départ (un point tous les `flyoverStep` m) : aucune boucle sur les points GPS à chaque image (18 322
+points sur l'Ohm Trail). Le cap vise le centre de gravité des `flyoverLookAhead` mètres suivants et suit un lissage
+exponentiel (`flyoverBearingSmoothing`) : pas d'à-coup dans les lacets. Vitesse en trapèze (accélération et
+ralentissement de `flyoverRamp` s), durée proportionnelle à la distance et bornée. Chaque `jumpTo` déclenche
+`moveend` : la mesure de la pente du relief (tracé aminci) est suspendue pendant le vol (`setFlyover`) et relancée
+à la fin. Le bouton devient « Arrêter » ; toute action sur la carte (souris, doigt, molette, clavier, sauf le
+panneau des fonds), le bouton 2D/3D ou le choix d'une côte arrêtent le survol là où il est. À l'arrivée, la carte
+reste en 3D et recadre en douceur toute la course (ou la côte). Jamais lancé automatiquement : seulement au clic
+(utile aussi avec la préférence « réduire les animations »).
+
 ## 9. Cycle de vie et changement de fond
 
 ```mermaid
@@ -285,6 +301,7 @@ sequenceDiagram
 | `DEM` en `tileSize: 256` (taille réelle des tuiles Terrarium) | relief à la bonne résolution (512 chargeait un zoom trop bas) |
 | Orthophotos SPW demandées en 512 px pour des tuiles 256 | net sur écran Retina |
 | Libellés et pastilles en couches `symbol`/`circle` (GPU) plutôt qu'en marqueurs DOM | fluide malgré des centaines d'éléments |
+| Survol 3D : chemin rééchantillonné une fois (un point tous les 15 m), mesure de la pente du relief suspendue pendant le vol | une image ne coûte qu'un `jumpTo` et un `cursor:move` |
 
 ## 11. Production des données géographiques
 
@@ -335,6 +352,15 @@ dans `MAP_STYLES`).
 | `fadeLabelDelay` | 300 ms | délai avant la pastille « Passage en 3D… » (bascule rapide : pas de pastille) |
 | `fadeSnapshotWait` | 400 ms | attente maximale de l'image figée ; au-delà, bascule directe sans fondu |
 | `animationDuration` | 900 / 1800 / 1200 / 800 ms | recadrage 2D, vol 3D, passage en 3D, retour en 2D |
+| `flyoverSecondsPerKm` / `flyoverMinDuration` / `flyoverMaxDuration` | 2 / 30 / 120 s | durée du survol 3D de toute la course : 2 s par km, entre 30 s et 2 min |
+| `flyoverClimbSecondsPerKm` / `flyoverClimbMinDuration` / `flyoverClimbMaxDuration` | 8 / 12 / 60 s | survol de la côte sélectionnée, plus lent |
+| `flyoverPitch` / `flyoverZoom` | 60 / 15,5 | inclinaison et zoom de la caméra pendant le survol (zoom 15,5 ≈ 2 km de large au centre d'une carte de 1000 px) |
+| `flyoverLookAhead` | 500 m | la caméra regarde vers le centre de gravité du tracé des 500 m suivants |
+| `flyoverBearingSmoothing` | 1,5 s | lissage exponentiel du cap : plus grand = virages de caméra plus doux, plus de retard dans les lacets |
+| `flyoverCenterAhead` | 80 m | centre de la vue devant le point courant : le point est sous le milieu de l'écran, la suite au-dessus |
+| `flyoverStep` | 15 m | pas du chemin rééchantillonné suivi par la caméra |
+| `flyoverRamp` | 2 s | accélération au départ et ralentissement à l'arrivée |
+| `flyoverIntroDuration` / `flyoverOutroDuration` | 2000 / 2500 ms | mise en place de la caméra au départ ; recadrage sur la course (ou la côte) à l'arrivée |
 
 Le test de fumée vérifie que ces réglages sont effectivement appliqués (fond, panneau, courbes, ombrage, bornes,
 inclinaison en 3D).

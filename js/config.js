@@ -67,5 +67,22 @@ export const MAP_CONFIG = {
     climb3D: 1800,                   // vol vers une côte en 3D
     enter3D: 1200,                   // passage en 3D
     exit3D: 800                      // retour en 2D
-  }
+  },
+
+  // ── Survol 3D (bouton « Survol », js/flyover.js) : la caméra suit le tracé, le curseur du profil avance ──
+  flyoverSecondsPerKm: 2,            // durée du survol de toute la course : secondes par km…
+  flyoverMinDuration: 30,            // … au moins (s)
+  flyoverMaxDuration: 120,           // … au plus (s)
+  flyoverClimbSecondsPerKm: 8,       // côte sélectionnée : survol de la côte seule, plus lent
+  flyoverClimbMinDuration: 12,       // … au moins (s)
+  flyoverClimbMaxDuration: 60,       // … au plus (s)
+  flyoverPitch: 60,                  // inclinaison de la caméra (degrés)
+  flyoverZoom: 15.5,                 // zoom de la caméra (15,5 ≈ 2 km de large au centre d'une carte de 1000 px)
+  flyoverLookAhead: 500,             // la caméra regarde vers le tracé des 500 m suivants (m)
+  flyoverBearingSmoothing: 1.5,      // lissage du cap (s) : plus grand = virages de caméra plus doux
+  flyoverCenterAhead: 80,            // centre de la vue devant le point courant (m) : le point est sous le milieu
+  flyoverStep: 15,                   // pas du chemin rééchantillonné suivi par la caméra (m)
+  flyoverRamp: 2,                    // accélération au départ et ralentissement à l'arrivée (s)
+  flyoverIntroDuration: 2000,        // mise en place de la caméra au départ du survol (ms)
+  flyoverOutroDuration: 2500         // recadrage sur toute la course (ou la côte) à l'arrivée (ms)
 };

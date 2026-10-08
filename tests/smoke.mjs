@@ -206,6 +206,41 @@ try {
   await page.click('#climbs-body tr.selected');
   check('Second clic : désélection', await page.evaluate(() => !trace.selected && location.hash === ''));
 
+  // Survol 3D (depuis la 2D, toute la course) : en rendu logiciel, une image peut prendre une seconde ; on vérifie
+  // la progression après plusieurs secondes, pas des valeurs à l'image près
+  await page.evaluate(async () => {
+    const { on } = await import('./js/bus.js');
+    window.__fly = { km: null, stops: 0 };
+    on('cursor:move', km => { window.__fly.km = km; });
+    on('cursor:stop', () => { window.__fly.stops++; });
+    window.__fly.center = trace.map.getCenter().toArray();
+  });
+  await page.click('#flyover-btn');
+  const flying = await page.waitForFunction(() => window.__fly.km > 0.05, { timeout: 90000 }).then(() => true, () => false);
+  await sleep(4000);
+  const fly = await page.evaluate(() => {
+    const [lng, lat] = trace.map.getCenter().toArray(), [lng0, lat0] = window.__fly.center;
+    return { flying: trace.flyover.isFlying(), terrain: !!trace.map.getTerrain(), pitch: Math.round(trace.map.getPitch()),
+      moved: Math.round(Math.hypot((lng - lng0) * 111320 * Math.cos(lat * Math.PI / 180), (lat - lat0) * 110540)),
+      km: window.__fly.km, dot: !!document.querySelector('.cursor-dot'),
+      btn: document.querySelector('#flyover-btn').textContent.trim() };
+  });
+  check('Survol 3D : relief, caméra inclinée qui avance, curseur du profil', flying && fly.flying && fly.terrain
+    && fly.pitch > 40 && fly.moved > 100 && fly.km > 0 && fly.dot && fly.btn === 'Arrêter',
+    `inclinaison ${fly.pitch}°, km ${fly.km?.toFixed(2)}, caméra déplacée de ${fly.moved} m`);
+  await page.click('#flyover-btn');
+  const kmAtStop = await page.evaluate(() => window.__fly.km);
+  await sleep(2500);
+  const stopped = await page.evaluate(k => ({ ok: !trace.flyover.isFlying() && window.__fly.km === k && window.__fly.stops > 0
+    && !document.querySelector('.cursor-dot') && document.querySelector('#flyover-btn').textContent.trim() === 'Survol' }), kmAtStop);
+  check('Survol 3D : « Arrêter » l\'arrête (curseur retiré, caméra rendue)', stopped.ok);
+  // Une action sur la carte l'arrête aussi
+  await page.click('#flyover-btn');
+  await page.waitForFunction(() => trace.flyover.isFlying(), { timeout: 10000 }).catch(() => {});
+  await sleep(3000);
+  await page.evaluate(() => trace.map.getCanvas().dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 300, clientY: 300 })));
+  check('Survol 3D : arrêté par une action sur la carte', await page.evaluate(() => !trace.flyover.isFlying()));
+
   // Règle du projet (CLAUDE.md) : jamais de tiret cadratin dans l'application
   const emDash = await page.evaluate(() => {
     const text = document.title + document.body.innerText
