@@ -1,27 +1,30 @@
 /* Polices servies par l'application (scripts/fetch_fonts.py) : aucune requête vers Google (RGPD) */
 @import url('fonts/fonts.css');
 
-/* Tokens : voir DESIGN.md (Grand Trail des Lacs & Châteaux · Winter) */
+/* Tokens du style de base « trace-view » (neutre) : page d'accueil et parcours sans identité propre. Voir DESIGN.md.
+   Chaque organisation les remplace par son thème (branding/<nom>.json → theme, appliqué par js/course.js). */
 :root {
-  --gt-primary: #dcecf0;
-  --gt-on-primary: #04080b;
-  --gt-ink: #04080b;
-  --gt-night: #141e28;
-  --gt-night-hover: #1f2d3b;
-  --gt-text: #202020;
-  --gt-text-muted: #585858;
+  --gt-primary: #10b981;                            /* vert émeraude : accent (onglet actif, filets, boutons) */
+  --gt-on-primary: #022c22;                         /* encre vert très sombre posée sur l'émeraude */
+  --gt-ink: #0f172a;
+  --gt-night: #1e293b;                              /* ardoise : en-tête */
+  --gt-night-hover: #334155;
+  --gt-text: #1f2937;
+  --gt-text-muted: #64748b;
   --gt-surface: #ffffff;
-  --gt-surface-soft: #f4f4f4;
-  --gt-surface-alt: #d4d4d4;
-  --gt-border: #e4e4e4;
-  --gt-disabled: #cccccc;
-  --gt-font: "Montserrat", Helvetica, Arial, sans-serif;
+  --gt-surface-soft: #f1f5f9;
+  --gt-surface-alt: #cbd5e1;
+  --gt-border: #e2e8f0;
+  --gt-disabled: #cbd5e1;
+  --gt-font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;   /* police du système */
   --gt-ease: 300ms ease-in-out;
   --gt-shadow-card: 0 1px 11px 0 rgba(172, 172, 172, 0.5);
   --gt-shadow-float: 0 10px 50px 0 rgba(0, 0, 0, 0.1);
-  /* Surchargeables par l'identité de la course (branding/<nom>.json → theme), voir js/app.js */
-  --gt-radius: 0;                                   /* arrondi des boutons, panneaux, cartes */
+  /* Surchargeables par l'identité de la course (branding/<nom>.json → theme), voir js/course.js */
+  --gt-radius: 6px;                                 /* arrondi des boutons, panneaux, cartes */
   --gt-font-display: var(--gt-font);                /* nom de la course */
+  --gt-caps: none;                                  /* titres, libellés, boutons : uppercase (capitales) ou none */
+  --gt-tracking: 0.2;                               /* interlettrage des titres et libellés (1 = 1,5 px sur un titre) */
   --gt-trace: #e8002d;                              /* couleur du tracé, reprise dans l'interface */
   --gt-primary-soft: color-mix(in srgb, var(--gt-primary) 45%, transparent);   /* survols */
   --gt-primary-line: color-mix(in srgb, var(--gt-primary) 70%, #000);          /* contour de la pastille */
@@ -50,8 +53,8 @@ header {
   gap: 14px;
   flex-shrink: 0;
 }
-header h1 { font-size: 1.15em; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; font-family: var(--gt-font-display); }
-header > span { font-size: 0.82em; color: var(--gt-primary); letter-spacing: 1px; text-transform: uppercase; }
+header h1 { font-size: 1.15em; font-weight: 700; text-transform: var(--gt-caps); letter-spacing: calc(1.5px * var(--gt-tracking)); font-family: var(--gt-font-display); }
+header > span { font-size: 0.82em; color: var(--gt-primary); letter-spacing: calc(1px * var(--gt-tracking)); text-transform: var(--gt-caps); }
 
 .stats-bar {
   display: flex;
@@ -64,8 +67,8 @@ header > span { font-size: 0.82em; color: var(--gt-primary); letter-spacing: 1px
   padding: 8px 22px;
   border-right: 1px solid color-mix(in srgb, var(--gt-primary) 15%, transparent);
   font-size: 0.72em;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
+  text-transform: var(--gt-caps);
+  letter-spacing: calc(1.5px * var(--gt-tracking));
   color: rgba(255,255,255,.75);
 }
 .stat strong { display: block; font-size: 1.4em; font-weight: 600; letter-spacing: 0; text-transform: none; color: #fff; }
@@ -91,8 +94,8 @@ header > span { font-size: 0.82em; color: var(--gt-primary); letter-spacing: 1px
   font-size: 0.82em;
   font-weight: 700;
   color: var(--gt-text);
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
+  text-transform: var(--gt-caps);
+  letter-spacing: calc(1.5px * var(--gt-tracking));
   padding: 10px 16px 8px;
   border-bottom: 1px solid var(--gt-border);
   flex-shrink: 0;
@@ -160,7 +163,7 @@ header > span { font-size: 0.82em; color: var(--gt-primary); letter-spacing: 1px
   background: var(--gt-surface-soft);
   flex-shrink: 0;
 }
-.filter-bar strong { font-size: 0.72em; color: var(--gt-text-muted); text-transform: uppercase; letter-spacing: 1.5px; }
+.filter-bar strong { font-size: 0.72em; color: var(--gt-text-muted); text-transform: var(--gt-caps); letter-spacing: calc(1.5px * var(--gt-tracking)); }
 .filter-btn {
   display: inline-flex;
   align-items: center;
@@ -171,8 +174,8 @@ header > span { font-size: 0.82em; color: var(--gt-primary); letter-spacing: 1px
   cursor: pointer;
   font-size: 0.72em;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  text-transform: var(--gt-caps);
+  letter-spacing: calc(1px * var(--gt-tracking));
   opacity: .4;
   transition: opacity var(--gt-ease), transform var(--gt-ease), box-shadow var(--gt-ease);
   user-select: none;
@@ -201,8 +204,8 @@ header > span { font-size: 0.82em; color: var(--gt-primary); letter-spacing: 1px
   font-family: inherit;
   font-size: .72em;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  text-transform: var(--gt-caps);
+  letter-spacing: calc(1px * var(--gt-tracking));
   cursor: pointer;
   transition: background var(--gt-ease);
 }
@@ -218,8 +221,8 @@ thead th {
   background: var(--gt-night);
   color: #fff;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  text-transform: var(--gt-caps);
+  letter-spacing: calc(1px * var(--gt-tracking));
   font-size: .9em;
   padding: 9px 10px;
   text-align: center;
@@ -278,8 +281,8 @@ tbody tr.hidden { display: none; }
   font-size: 0.82em;
   font-weight: 700;
   color: var(--gt-text);
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
+  text-transform: var(--gt-caps);
+  letter-spacing: calc(1.5px * var(--gt-tracking));
   padding: 10px 16px 8px;
   border-bottom: 1px solid var(--gt-border);
   background: var(--gt-surface);
@@ -303,8 +306,8 @@ tbody tr.hidden { display: none; }
   font-family: inherit;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  letter-spacing: calc(1px * var(--gt-tracking));
+  text-transform: var(--gt-caps);
   white-space: nowrap;
   background: var(--gt-surface);
   border: 2px solid var(--gt-primary);
@@ -398,8 +401,8 @@ tbody tr.hidden { display: none; }
   font-size: 9.5px;
   font-weight: 700;
   color: var(--gt-text);
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
+  text-transform: var(--gt-caps);
+  letter-spacing: calc(1.5px * var(--gt-tracking));
   margin: 0;
 }
 .m3d-panel-toggle {
@@ -487,15 +490,15 @@ tbody tr.hidden { display: none; }
   font-size: 9px;
   font-weight: 700;
   color: var(--gt-text-muted);
-  text-transform: uppercase;
-  letter-spacing: .5px;
+  text-transform: var(--gt-caps);
+  letter-spacing: calc(.5px * var(--gt-tracking));
 }
 .m3d-trace-btn {
   font-family: inherit;
   font-size: 9px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  text-transform: var(--gt-caps);
+  letter-spacing: calc(1px * var(--gt-tracking));
   padding: 4px 10px;
   border: 2px solid var(--gt-primary);
   border-radius: var(--gt-radius);
@@ -510,15 +513,15 @@ tbody tr.hidden { display: none; }
   font-size: 9px;
   font-weight: 700;
   color: var(--gt-text-muted);
-  text-transform: uppercase;
-  letter-spacing: .5px;
+  text-transform: var(--gt-caps);
+  letter-spacing: calc(.5px * var(--gt-tracking));
 }
 .m3d-style-thumb span {
   font-size: 9px;
   color: var(--gt-text-muted);
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: .5px;
+  text-transform: var(--gt-caps);
+  letter-spacing: calc(.5px * var(--gt-tracking));
 }
 /* Contrôles MapLibre plus grands sur écran tactile */
 @media (max-width: 768px) {
@@ -542,8 +545,8 @@ tbody tr.hidden { display: none; }
   border-radius: var(--gt-radius);
   cursor: pointer;
   color: var(--gt-ink)   /* texte sur fond clair ; on-primary seulement sur l'accent */;
-  letter-spacing: 2px;
-  text-transform: uppercase;
+  letter-spacing: calc(2px * var(--gt-tracking));
+  text-transform: var(--gt-caps);
   transition: background var(--gt-ease), color var(--gt-ease), border-color var(--gt-ease);
 }
 .btn-3d-toggle:hover { background: var(--gt-primary); color: var(--gt-on-primary); }
@@ -584,7 +587,7 @@ tbody tr.hidden { display: none; }
 
 /* ── Mini-profil au survol ── */
 #mini-profile { position:fixed; display:none; background:var(--gt-surface); border:none; border-top:3px solid var(--gt-primary); border-radius:0; box-shadow:var(--gt-shadow-float); padding:8px 10px 6px; z-index:9999; pointer-events:none; width:220px; }
-#mini-profile .mp-title { font-size:11px; font-weight:700; color:var(--gt-text); text-transform:uppercase; letter-spacing:1px; margin:0 0 4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#mini-profile .mp-title { font-size:11px; font-weight:700; color:var(--gt-text); text-transform: var(--gt-caps); letter-spacing: calc(1px * var(--gt-tracking)); margin:0 0 4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 #mini-profile .mp-stats { display:flex; gap:8px; margin-bottom:5px; }
 #mini-profile .mp-stat { display:flex; flex-direction:column; font-size:10px; }
 #mini-profile .mp-stat span:first-child { color:var(--gt-text-muted); }
@@ -616,14 +619,16 @@ tbody tr.hidden { display: none; }
   font-size: 0.78em;
   font-weight: 700;
   color: var(--gt-text);
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
+  text-transform: var(--gt-caps);
+  letter-spacing: calc(1.5px * var(--gt-tracking));
   padding-bottom: 8px;
   position: relative;
   display: inline-block;
 }
-/* Signature « point + filet » sous les titres */
-.profile-title::before {
+/* Signature « point + filet » sous les titres (grandtrail.be) : seulement si l'identité la demande (theme.titleRule) */
+.profile-title { padding-bottom: 0; }
+:root.title-rule .profile-title { padding-bottom: 8px; }
+:root.title-rule .profile-title::before {
   content: "";
   position: absolute;
   left: 0;
@@ -634,7 +639,7 @@ tbody tr.hidden { display: none; }
   background: var(--gt-primary);
   box-shadow: 0 0 0 1px var(--gt-primary-line);
 }
-.profile-title::after {
+:root.title-rule .profile-title::after {
   content: "";
   position: absolute;
   right: 0;
@@ -683,8 +688,8 @@ tbody tr.hidden { display: none; }
   border-radius: var(--gt-radius);
   font-size: 0.7em;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
+  text-transform: var(--gt-caps);
+  letter-spacing: calc(1.5px * var(--gt-tracking));
   cursor: pointer;
   border: 2px solid var(--gt-primary);
   background: var(--gt-surface);
@@ -808,7 +813,7 @@ tbody tr.hidden { display: none; }
   /* Statistiques sur une seule ligne qui défile horizontalement : la carte garde sa hauteur */
   .stats-bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .stats-bar::-webkit-scrollbar { display: none; }
-  .stat { flex-shrink: 0; padding: 6px 12px; font-size: 0.68em; letter-spacing: .5px; }
+  .stat { flex-shrink: 0; padding: 6px 12px; font-size: 0.68em; letter-spacing: calc(.5px * var(--gt-tracking)); }
   .stat strong { font-size: 1em; }
 
   .mobile-nav {
@@ -823,8 +828,8 @@ tbody tr.hidden { display: none; }
     font-family: inherit;
     font-size: 0.72em;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
+    text-transform: var(--gt-caps);
+    letter-spacing: calc(1.5px * var(--gt-tracking));
     color: var(--gt-text-muted);
     cursor: pointer;
     background: none;
@@ -855,7 +860,7 @@ tbody tr.hidden { display: none; }
   .card-title .selection-info { display: none; }
   .profile-header { padding: 8px 12px 0; }
   .profile-tabs { padding: 6px 12px 4px; }
-  .profile-tab { padding: 3px 9px; font-size: .62em; letter-spacing: 1px; }
+  .profile-tab { padding: 3px 9px; font-size: .62em; letter-spacing: calc(1px * var(--gt-tracking)); }
   .profile-legend { display: none; }
   .m3d-style-panel { right: 52px; }
 
@@ -877,7 +882,7 @@ header h1 .icon { color: var(--gt-primary); vertical-align: -3px; margin-right: 
 /* ── Retour à la page d'accueil (en-tête d'une course) ── */
 .back-link {
   margin-left: auto; align-self: center; display: inline-flex; align-items: center; gap: 6px;
-  font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap;
+  font-size: 11px; font-weight: 600; letter-spacing: calc(1px * var(--gt-tracking)); text-transform: var(--gt-caps); white-space: nowrap;
   color: #fff; text-decoration: none; border: 2px solid var(--gt-primary); border-radius: var(--gt-radius);
   padding: 5px 12px; transition: background var(--gt-ease), color var(--gt-ease);
 }
@@ -907,9 +912,9 @@ body.dashboard-mode { height: auto; min-height: 100vh; overflow: auto; display: 
 body.dashboard-mode > header, body.dashboard-mode > .stats-bar, body.dashboard-mode > .mobile-nav,
 body.dashboard-mode > main.layout { display: none; }
 .dash-header { background: var(--gt-night); color: #fff; border-bottom: 4px solid var(--gt-primary); padding: 22px 24px 18px; }
-.dash-header h1 { display: flex; align-items: center; gap: 10px; font-size: 22px; letter-spacing: 1.5px; text-transform: uppercase; }
+.dash-header h1 { display: flex; align-items: center; gap: 10px; font-size: 22px; letter-spacing: calc(1.5px * var(--gt-tracking)); text-transform: var(--gt-caps); }
 .dash-header h1 .icon { color: var(--gt-primary); }
-.dash-header p { margin-top: 6px; font-size: 13px; color: var(--gt-primary); letter-spacing: .3px; }
+.dash-header p { margin-top: 6px; font-size: 13px; color: var(--gt-primary); letter-spacing: calc(.3px * var(--gt-tracking)); }
 .dash-main { max-width: 1240px; margin: 0 auto; padding: 24px 24px 40px; }
 /* Ordinateur : les groupes se rangent côte à côte, chacun sur autant de colonnes que de parcours */
 @media (min-width: 769px) {
@@ -925,14 +930,14 @@ body.dashboard-mode > main.layout { display: none; }
 }
 .dash-group-title {
   display: flex; align-items: center; gap: 10px; margin-bottom: 12px; min-height: 34px;
-  font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gt-ink);
+  font-size: 13px; letter-spacing: calc(1.5px * var(--gt-tracking)); text-transform: var(--gt-caps); color: var(--gt-ink);
 }
 .dash-group-logo {
   width: 34px; height: 34px; border-radius: 50%; background: #fff; box-shadow: var(--gt-shadow-card);
   display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .dash-group-logo svg { display: block; }
-.dash-group-count { white-space: nowrap; font-size: 11px; font-weight: 500; letter-spacing: .5px; text-transform: none; color: var(--gt-text-muted); }
+.dash-group-count { white-space: nowrap; font-size: 11px; font-weight: 500; letter-spacing: calc(.5px * var(--gt-tracking)); text-transform: none; color: var(--gt-text-muted); }
 .dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
 .dash-tile {
   display: flex; flex-direction: column; background: var(--gt-surface); color: var(--gt-text); text-decoration: none;
@@ -994,9 +999,9 @@ body.dashboard-mode > main.layout { display: none; }
   repeating-linear-gradient(120deg, transparent 0 7px, #b4522a 7px 9px, transparent 9px 12px),
   linear-gradient(135deg, #f4f1e8 0%, #d9e6bd 40%, #aed096 75%, #8d7154 100%); }
 .m3d-old-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
-.m3d-old-label { font-size: 9px; font-weight: 700; color: var(--gt-text-muted); text-transform: uppercase; letter-spacing: .5px; flex: 1; }
-.m3d-old-btn { flex-direction: row; padding: 2px 8px; font-size: 9px; font-weight: 600; text-transform: uppercase;
-  letter-spacing: .5px; color: var(--gt-text-muted); opacity: .75; border: 1px dashed var(--gt-surface-alt); }
+.m3d-old-label { font-size: 9px; font-weight: 700; color: var(--gt-text-muted); text-transform: var(--gt-caps); letter-spacing: calc(.5px * var(--gt-tracking)); flex: 1; }
+.m3d-old-btn { flex-direction: row; padding: 2px 8px; font-size: 9px; font-weight: 600; text-transform: var(--gt-caps);
+  letter-spacing: calc(.5px * var(--gt-tracking)); color: var(--gt-text-muted); opacity: .75; border: 1px dashed var(--gt-surface-alt); }
 .m3d-old-btn.m3d-active { opacity: 1; }
 
 /* Logo de l'organisation dans l'en-tête (identité avec headerLogo) */
@@ -1023,7 +1028,7 @@ header h1 { display: flex; align-items: center; }   /* titre long : retour à la
   position: relative; display: flex; align-items: center; gap: 8px;
   padding: 7px 14px; border-radius: 9999px;
   background: var(--gt-night); color: #fff;
-  font-size: 12px; font-weight: 600; letter-spacing: .3px; box-shadow: 0 2px 10px rgba(0,0,0,.25);
+  font-size: 12px; font-weight: 600; letter-spacing: calc(.3px * var(--gt-tracking)); box-shadow: 0 2px 10px rgba(0,0,0,.25);
   opacity: 0; animation: map-crossfade-show 200ms ease-out var(--fade-label-delay, 300ms) forwards;
 }
 .map-crossfade-label::before, .btn-3d-toggle.busy::after {

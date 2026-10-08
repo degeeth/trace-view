@@ -28,9 +28,23 @@ export function icon(name, size = 16) {
     + ` fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
 }
 
-// Remplace les <i data-icon="nom" data-size="16"> du HTML par l'icône correspondante
+// Logo de trace-view : badge vert émeraude et un seul trait blanc qui se lit deux fois — un coureur penché
+// en pleine foulée (la tête, les jambes) et un tracé de trail (le sommet, la descente qui repart vers le haut).
+// L'ancienne version illustrée est conservée dans docs/logo-illustre.svg.
+// Utilisé là où l'application parle en son nom (page d'accueil, parcours sans identité, icône d'onglet).
+// Même dessin que l'icône d'onglet d'index.html : modifier les deux ensemble.
+export const APP_LOGO_COLOR = '#10B981';
+export function appLogo(size = 24) {
+  return `<svg class="icon app-logo" xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 32 32" aria-hidden="true">`
+    + `<rect x="1" y="1" width="30" height="30" rx="8" fill="${APP_LOGO_COLOR}"/>`
+    + '<path d="M6 23.5 12.8 12.8l4.4 6.3c2.4 3.2 6.2 2.6 9.8-3.6" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '<circle cx="14.6" cy="7.4" r="2.6" fill="#fff"/></svg>';
+}
+
+// Remplace les <i data-icon="nom" data-size="16"> du HTML par l'icône correspondante (« trace-view » : le logo)
 export function hydrateIcons(root = document) {
   root.querySelectorAll('i[data-icon]').forEach(el => {
-    el.outerHTML = icon(el.dataset.icon, Number(el.dataset.size) || 16);
+    const size = Number(el.dataset.size) || 16;
+    el.outerHTML = el.dataset.icon === 'trace-view' ? appLogo(size) : icon(el.dataset.icon, size);
   });
 }

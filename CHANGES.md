@@ -1044,3 +1044,28 @@ README, skill
   des ravitaillements s'y superpose au lieu de prendre de la hauteur à la courbe
 - Mesuré : courbe de 170 px dans les trois modes sur ordinateur (150 avant), 90 px sur mobile (70 avant) ; barre à
   5 px sous la courbe, sans la recouvrir
+
+---
+
+## 57. Style de base neutre ; le style GTLC devient un thème
+
+**Fichiers** : `style.css`, `js/course.js`, `js/chart.js`, `branding/*.json`, `data/*.json`, `fonts/fonts.css`,
+`scripts/fetch_fonts.py`, `DESIGN.md` (nouveau), `courses/gtlc-65-2024/DESIGN.md` (ancien `DESIGN.md`), `README.md`,
+`CLAUDE.md`, `courses/*/DESIGN.md`
+
+- Style de base propre à trace-view, pour la page d'accueil et les parcours sans identité (HRP) : ardoise et vert
+  émeraude (`#10B981`), police du système (rien à télécharger), casse normale, arrondis de 6 px, pas de décor sous les titres
+- Logo de trace-view à la place de la montagne : badge vert émeraude, profil de dénivelé à deux sommets et repère sur
+  le plus haut ; en-tête de la page d'accueil et des parcours sans identité, tuiles et groupe HRP, icône d'onglet
+- Le style d'origine (d'après grandtrail.be, édition Winter) devient le thème de `branding/gtlc.json` : couleurs,
+  Montserrat, capitales espacées et point + filet sous « Profil de course » ; le GTLC garde exactement son look
+- Nouvelles clés de thème : `text`, `textMuted`, `surfaceSoft`, `surfaceAlt`, `border`, `caps` (capitales),
+  `tracking` (interlettrage), `titleRule` (point + filet). Les 25 `uppercase` et 30 interlettrages de `style.css`
+  passent par `--gt-caps` et `--gt-tracking`
+- OSO, Extratrail, La Grande Ourthe et Ohm Trail : capitales d'après leur `DESIGN.md`, interlettrage plus modéré que
+  le GTLC, sans point + filet
+- `DESIGN.md` racine : style de base de trace-view ; celui du GTLC déplacé dans `courses/gtlc-65-2024/`
+- Profil : icône des ravitaillements redessinée quand son image a fini de charger (le cerf du GTLC pouvait manquer
+  sur les pastilles blanches)
+- Crédits de la carte raccourcis (« Relief : Mapzen », « Courbes : Copernicus DEM © DLR, Airbus DS (UE, ESA) », avec
+  liens) : ils couvraient trois lignes du bas de la carte

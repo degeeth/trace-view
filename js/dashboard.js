@@ -2,7 +2,7 @@
 // Catalogue : data/courses.json ; identités (logo, couleurs) : data/brandings.json, écrits par scripts/build_course.py.
 // Groupe d'une course : "group" de son course.json, sinon son organisation (identité), sinon « Autres parcours ».
 import { brandIconSvg, brandIconBox, escapeHtml, fmtClock } from './race.js';
-import { icon, hydrateIcons } from './icons.js';
+import { icon, appLogo, hydrateIcons } from './icons.js';
 
 const DEFAULT_BRANDING = 'defaut';
 const $ = sel => document.querySelector(sel);
@@ -18,7 +18,7 @@ hydrateIcons();
 const brandingOf = id => brandings[id] || brandings[DEFAULT_BRANDING] || {};
 function logo(id, size) {
   const b = brandingOf(id);
-  if (!b.headerLogo || !b.aidStationIcon) return icon('mountain-snow', Math.round(size * 0.8));
+  if (!b.headerLogo || !b.aidStationIcon) return appLogo(Math.round(size * 0.85));
   const fake = { branding: b };
   const { height } = brandIconBox(fake, size);
   return brandIconSvg(fake, b.theme?.aidIconColor || '#04080b', height);
@@ -59,7 +59,7 @@ function tile(c) {
 
 $('#dashboard').innerHTML = `
   <header class="dash-header">
-    <h1>${icon('mountain-snow', 22)} Parcours</h1>
+    <h1>${appLogo(28)} Parcours</h1>
     <p>Carte en 3D, profil et analyse côte par côte · ${catalog.length} parcours</p>
   </header>
   <main class="dash-main">

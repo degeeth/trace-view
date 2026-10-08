@@ -1,6 +1,7 @@
 # trace-view : consignes pour Claude
 
-Voir `README.md` (fonctionnement, ajout d'une course) et `DESIGN.md` (identité visuelle).
+Voir `README.md` (fonctionnement, ajout d'une course) et `DESIGN.md` (style de base neutre de trace-view ; le style de chaque organisation est dans le
+`DESIGN.md` du dossier de sa course et dans son thème `branding/<nom>.json`).
 
 ## Règles
 

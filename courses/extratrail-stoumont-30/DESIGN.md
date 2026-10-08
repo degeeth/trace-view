@@ -42,7 +42,8 @@ branding:                  # proposition pour branding/extratrail.json (trace-vi
 > Identité du [parcours noir d'Extratrail Stoumont](https://www.extratrail.com/fr/trails-balisestrails-stoumont/stoumont-extratrail-30-km),
 > boucle de 30 km et 967 m D+ (durée annoncée 4 h à 7 h, difficulté « +++++ ») au départ de la bibliothèque
 > communale, route de l'Amblève 45, 4987 Stoumont. Ce document sert à habiller le parcours dans trace-view ;
-> le `DESIGN.md` à la racine du dépôt reste celui du Grand Trail des Lacs & Châteaux (GTLC).
+> le `DESIGN.md` à la racine du dépôt décrit le style de base neutre de trace-view ; celui du GTLC est dans
+> `courses/gtlc-65-2024/DESIGN.md`.
 > Valeurs relevées le 5 octobre 2026 sur le site (feuilles de style, rendu de la page, SVG du logo).
 
 ---

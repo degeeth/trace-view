@@ -35,7 +35,8 @@ branding:                  # proposition pour branding/coureurs-celestes.json (t
 
 > Identité de [La Grande Ourthe](https://www.lescoureurscelestes.be/), course de ≈ 100 km au départ de
 > Lohan (La Roche-en-Ardenne), organisée par **Les Coureurs Célestes**. Ce document sert à habiller la course
-> dans trace-view ; le `DESIGN.md` à la racine du dépôt reste celui du Grand Trail des Lacs & Châteaux (GTLC).
+> dans trace-view ; le `DESIGN.md` à la racine du dépôt décrit le style de base neutre de trace-view ; celui du GTLC est dans
+> `courses/gtlc-65-2024/DESIGN.md`.
 > Valeurs relevées sur le site (feuille de style, rendu de la page, logo).
 
 ---

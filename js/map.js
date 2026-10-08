@@ -10,7 +10,7 @@ import { icon } from './icons.js';
 // Relief : Terrarium AWS (standard, zoom 14) ou Mapterhorn (qualité haute, zoom 17 : rochers, crêtes, ravins nets)
 const DEM = {
   standard: { tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 14,
-              attribution: 'Relief : <a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank">Mapzen Terrain Tiles</a> (SRTM, GMTED, AWS Open Data)' },
+              attribution: '<a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank">Relief : Mapzen</a>' },
   high: { tiles: ['https://tiles.mapterhorn.com/{z}/{x}/{y}.webp'], tileSize: 512, maxzoom: 17,
           attribution: '<a href="https://mapterhorn.com/attribution" target="_blank">© Mapterhorn</a>' }
 };
@@ -469,7 +469,7 @@ export function createMap(race, { container }) {
   }
 
   function addContours(beforeId) {
-    const copernicus = 'Courbes : Copernicus DEM GLO-30, © DLR e.V. et © Airbus Defence and Space, fourni par l\'UE et l\'ESA (COPERNICUS)';
+    const copernicus = '<a href="https://spacedata.copernicus.eu/collections/copernicus-digital-elevation-model" target="_blank">Courbes : Copernicus DEM</a> © DLR, Airbus DS (UE, ESA)';
     map.addSource('contours-thick', { type: 'geojson', data: contourCache.thick || race.contours.thick, attribution: copernicus });
     map.addSource('contours-thin', { type: 'geojson', data: contourCache.thin || EMPTY });
     const color = '#8d7154';

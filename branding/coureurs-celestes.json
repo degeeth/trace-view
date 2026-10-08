@@ -18,6 +18,8 @@
     "font": "'Open Sans', Arial, sans-serif",
     "fontDisplay": "Oswald, 'Arial Narrow', sans-serif",
     "googleFonts": "family=Oswald:wght@500;700&family=Open+Sans:wght@400;600;700",
-    "aidIconColor": "#1E5AA8"
+    "aidIconColor": "#1E5AA8",
+    "caps": "uppercase",
+    "tracking": 0.7
   }
 }

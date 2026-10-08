@@ -50,10 +50,14 @@ try {
 // ── Thème de l'identité visuelle (branding/<nom>.json → theme) : variables CSS de style.css ──
 const theme = race.branding.theme || {};
 const THEME_VARS = { primary: '--gt-primary', onPrimary: '--gt-on-primary', ink: '--gt-ink', night: '--gt-night',
-  nightHover: '--gt-night-hover', radius: '--gt-radius', font: '--gt-font', fontDisplay: '--gt-font-display' };
+  nightHover: '--gt-night-hover', radius: '--gt-radius', font: '--gt-font', fontDisplay: '--gt-font-display',
+  text: '--gt-text', textMuted: '--gt-text-muted', surfaceSoft: '--gt-surface-soft', surfaceAlt: '--gt-surface-alt',
+  border: '--gt-border', caps: '--gt-caps', tracking: '--gt-tracking' };
 Object.entries(THEME_VARS).forEach(([key, cssVar]) => {
-  if (theme[key]) document.documentElement.style.setProperty(cssVar, theme[key]);
+  if (theme[key] != null && theme[key] !== '') document.documentElement.style.setProperty(cssVar, theme[key]);
 });
+// Point + filet sous les titres (signature du GTLC) : seulement pour les identités qui le demandent
+document.documentElement.classList.toggle('title-rule', !!theme.titleRule);
 document.documentElement.style.setProperty('--gt-trace', race.branding.traceColor);
 // Polices des identités : servies par l'application (fonts/fonts.css, scripts/fetch_fonts.py), pas par Google
 

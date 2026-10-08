@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Analyse des côtes</title>
-  <link rel="icon" href="data:,">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='30' height='30' rx='8' fill='%2310B981'/%3E%3Cpath d='M6 23.5 12.8 12.8l4.4 6.3c2.4 3.2 6.2 2.6 9.8-3.6' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='14.6' cy='7.4' r='2.6' fill='%23fff'/%3E%3C/svg%3E">
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css"/>
@@ -13,13 +13,13 @@
   <!-- Page d'un parcours : masquée dès le premier affichage jusqu'à ce qu'elle soit complète (données, identité,
        carte), pour ne jamais montrer l'interface vide ni le logo et les couleurs par défaut (js/course.js) -->
   <script>if (new URLSearchParams(location.search).get('course')) document.documentElement.classList.add('page-loading');</script>
-  <link rel="stylesheet" href="style.css?v=32"/>
-  <script type="module" src="js/app.js?v=46"></script>
+  <link rel="stylesheet" href="style.css?v=34"/>
+  <script type="module" src="js/app.js?v=49"></script>
 </head>
 <body>
 
 <header>
-  <h1><i data-icon="mountain-snow" data-size="20"></i> <span id="race-name"></span></h1>
+  <h1><i data-icon="trace-view" data-size="24"></i> <span id="race-name"></span></h1>
   <span id="race-subtitle"></span>
   <a class="back-link" href="index.html"><i data-icon="arrow-left" data-size="14"></i> Tous les parcours</a>
 </header>

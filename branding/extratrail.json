@@ -18,6 +18,8 @@
     "font": "Helvetica, Roboto, Arial, sans-serif",
     "fontDisplay": "Saira, 'Arial Narrow', sans-serif",
     "googleFonts": "family=Saira:wght@500;700",
-    "aidIconColor": "#6C4796"
+    "aidIconColor": "#6C4796",
+    "caps": "uppercase",
+    "tracking": 0.6
   }
 }

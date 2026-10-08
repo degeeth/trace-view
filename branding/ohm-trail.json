@@ -18,6 +18,8 @@
     "font": "'Open Sans', Arial, sans-serif",
     "fontDisplay": "Montserrat, 'Open Sans', sans-serif",
     "googleFonts": "family=Montserrat:wght@600;700&family=Open+Sans:wght@400;600;700",
-    "aidIconColor": "#E84E0F"
+    "aidIconColor": "#E84E0F",
+    "caps": "uppercase",
+    "tracking": 0.6
   }
 }

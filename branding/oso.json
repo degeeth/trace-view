@@ -18,6 +18,8 @@
     "font": "Poppins, Arial, sans-serif",
     "fontDisplay": "Sora, Poppins, sans-serif",
     "googleFonts": "family=Sora:wght@600;700&family=Poppins:wght@400;600;700",
-    "aidIconColor": "#3B6E1E"
+    "aidIconColor": "#3B6E1E",
+    "caps": "uppercase",
+    "tracking": 0.8
   }
 }

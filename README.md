@@ -28,7 +28,7 @@ Catégories de pente (moyenne de la côte) : 🟢 4–7 % · 🟠 7–10 % · �
 |---|---|
 | [docs/CARTOGRAPHIE.md](docs/CARTOGRAPHIE.md) | architecture de la carte : technologies, sources, fonds, empilement des couches, 2D/3D, production des données géographiques |
 | [docs/LICENCES.md](docs/LICENCES.md) | licences des fonds de carte et des données, en vue d'un usage commercial : ce qui est autorisé, ce qu'il faut remplacer |
-| [DESIGN.md](DESIGN.md) | identité visuelle (couleurs, typographie, composants) |
+| [DESIGN.md](DESIGN.md) | style de base de trace-view (neutre) et thèmes des organisations |
 | [docs/BACKLOG.md](docs/BACKLOG.md) | idées retenues, pas encore réalisées |
 | [CHANGES.md](CHANGES.md) | journal des changements |
 | [CLAUDE.md](CLAUDE.md) | règles du projet pour Claude Code |
@@ -133,7 +133,8 @@ Identités présentes : `gtlc` (cerf, courses du GTLC), `coureurs-celestes` (emp
 `oso` (coureuse du Cercle Sportif Olnois), `extratrail` (emblème Extratrail), `defaut` (couteau / fourchette).
 Chacune a son `DESIGN.md` dans le dossier de sa course de référence.
 
-`theme` (facultatif) adapte l'interface à l'organisation ; sans lui, thème GTLC par défaut :
+`theme` (facultatif) adapte l'interface à l'organisation ; sans lui, style de base neutre de trace-view
+(`DESIGN.md`, aussi celui de la page d'accueil) :
 
 | Clé | Effet |
 |---|---|
@@ -141,6 +142,9 @@ Chacune a son `DESIGN.md` dans le dossier de sa course de référence.
 | `ink`, `night`, `nightHover` | encre, fond de l'en-tête et des en-têtes de tableau, survol |
 | `radius` | arrondi des boutons et panneaux (`0` = angles droits, `6px` = doux) |
 | `font`, `fontDisplay`, `googleFonts` | police du texte, du nom de la course, et familles Google Fonts utilisées ; après l'ajout d'une famille, lancer `python3 scripts/fetch_fonts.py` : les polices sont servies par l'application (`fonts/`), jamais chargées depuis Google |
+| `text`, `textMuted`, `surfaceSoft`, `surfaceAlt`, `border` | couleurs des textes et des fonds |
+| `caps`, `tracking` | `"uppercase"` : titres, libellés et boutons en capitales ; interlettrage (`1` = 1,5 px sur un titre) |
+| `titleRule` | `true` : point + filet sous les titres (signature du GTLC) |
 | `aidIconColor` | couleur de l'icône des ravitaillements sur sa pastille blanche (défaut : encre) |
 
 `headerLogo: true` (au niveau de l'identité) affiche l'icône de l'organisation dans l'en-tête, à côté du titre,
@@ -267,7 +271,7 @@ tests/
 .claude/skills/add-course/       skill Claude Code du workflow (anglais)
 docs/CARTOGRAPHIE.md     documentation technique de la carte
 docs/LICENCES.md         licences des fonds de carte et des données
-DESIGN.md                identité visuelle (d'après grandtrail.be, édition Winter)
+DESIGN.md                style de base de trace-view (neutre) ; chaque organisation a le sien (courses/<id>/DESIGN.md)
 CHANGES.md               journal des changements
 ```
 

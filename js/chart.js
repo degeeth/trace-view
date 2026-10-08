@@ -130,7 +130,7 @@ export function createChart(race, { canvas, wrap, rvBar, infoEl, resetBtn }) {
         if (visible(px)) {
           const py = y.getPixelForValue(race.peak.ele);
           dot(px, py, LANDMARK_COLORS.peak);
-          ctx.font = '700 10px Montserrat, Helvetica, Arial, sans-serif';
+          ctx.font = `700 10px ${getComputedStyle(document.documentElement).getPropertyValue('--gt-font')}`;
           ctx.textAlign = 'center';
           ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.fillStyle = INK;
           const label = `▲ ${Math.round(race.peak.eleRaw)} m`;
@@ -217,6 +217,8 @@ export function createChart(race, { canvas, wrap, rvBar, infoEl, resetBtn }) {
       }
     }
   });
+  // Icône des ravitaillements dessinée sur le profil : redessiner quand son image a fini de charger
+  if (!aidImg.complete) aidImg.addEventListener('load', () => chart.update('none'), { once: true });
 
   // ── Zoom sur la côte sélectionnée ──
   // Fenêtre = côte ± 40 % de sa longueur (au moins ± 500 m), altitudes recalées sur la fenêtre

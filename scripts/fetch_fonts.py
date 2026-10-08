@@ -17,7 +17,7 @@ import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'fonts')
-BASE_FONTS = 'family=Montserrat:wght@300;400;600;700;800'      # style.css (identité par défaut, GTLC)
+BASE_FONTS = None   # style de base : police du système, rien à télécharger (Montserrat vient du thème GTLC)
 SUBSETS = ('latin', 'latin-ext')
 # Navigateur récent : Google renvoie alors du woff2 avec les sous-ensembles commentés (/* latin */)
 USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36'
@@ -30,7 +30,7 @@ def fetch(url):
 
 
 def specs():
-    out = [BASE_FONTS]
+    out = [BASE_FONTS] if BASE_FONTS else []
     for path in sorted(glob.glob(os.path.join(ROOT, 'branding', '*.json'))):
         with open(path, encoding='utf-8') as f:
             fonts = json.load(f).get('theme', {}).get('googleFonts')
