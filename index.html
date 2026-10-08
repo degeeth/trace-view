@@ -13,8 +13,8 @@
   <!-- Page d'un parcours : masquée dès le premier affichage jusqu'à ce qu'elle soit complète (données, identité,
        carte), pour ne jamais montrer l'interface vide ni le logo et les couleurs par défaut (js/course.js) -->
   <script>if (new URLSearchParams(location.search).get('course')) document.documentElement.classList.add('page-loading');</script>
-  <link rel="stylesheet" href="style.css?v=34"/>
-  <script type="module" src="js/app.js?v=49"></script>
+  <link rel="stylesheet" href="style.css?v=35"/>
+  <script type="module" src="js/app.js?v=50"></script>
 </head>
 <body>
 
@@ -65,9 +65,10 @@
           <tr>
             <th class="sortable" data-col="num" title="Trier par numéro">N°</th>
             <th>Km départ</th>
-            <th class="col-opt">Km arrivée</th>
+            <th class="col-opt col-end">Km arrivée</th>
             <th class="sortable" data-col="dist" title="Trier par distance">Distance</th>
             <th class="sortable" data-col="deni" title="Trier par dénivelé">Dénivelé (pente)</th>
+            <th class="col-opt sortable" data-col="steep" title="Passage le plus raide sur 100 m : trier par pente">Plus raide</th>
             <th class="col-opt">Alt. départ</th>
             <th>Alt. sommet</th>
           </tr>
@@ -128,6 +129,7 @@
     <div class="mp-stat"><span>Pente moy.</span><span data-mp="pct"></span></div>
     <div class="mp-stat"><span>Alt. sommet</span><span data-mp="top"></span></div>
   </div>
+  <p class="mp-steep">Plus raide : <span data-mp="steep"></span></p>
   <canvas height="60" width="200"></canvas>
 </div>
 

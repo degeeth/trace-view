@@ -250,6 +250,15 @@ tbody tr:focus-visible { outline: 2px solid var(--gt-ink); outline-offset: -2px;
 .cell-vert   { background: #27ae60; color: #fff; }
 .cell-orange { background: #e67e22; color: #fff; }
 .cell-rouge  { background: #c0392b; color: #fff; }
+/* Passage le plus raide (100 m) : pente en gras, couleur de sa classe assombrie pour rester lisible */
+.cell-steep { font-variant-numeric: tabular-nums; }
+thead th[data-col="steep"], tbody td.cell-steep { padding-left: 6px; padding-right: 6px; }
+.steep-pct { font-weight: 700; color: color-mix(in srgb, var(--steep) 80%, #000); }
+tbody tr.selected .steep-pct { color: inherit; }
+/* Ordinateur de largeur moyenne : « Km arrivée » (= départ + distance, rappelé au survol) laisse la place à
+   « Plus raide » pour éviter le défilement horizontal du tableau */
+@media (min-width: 769px) and (max-width: 1679px) { .col-end { display: none; } }
+@media (max-width: 768px) { .profile-header .info-range { display: none; } }
 tbody tr:hover { background: var(--gt-primary-soft) !important; }
 tbody tr.selected {
   background: var(--gt-primary) !important;
@@ -593,6 +602,8 @@ tbody tr.hidden { display: none; }
 #mini-profile .mp-stat span:first-child { color:var(--gt-text-muted); }
 #mini-profile .mp-stat span:last-child  { font-weight:700; color:var(--gt-text); }
 #mini-profile canvas { width:100% !important; height:60px !important; display:block; }
+#mini-profile .mp-steep { font-size:10px; color:var(--gt-text-muted); margin:0 0 4px; white-space:nowrap; }
+#mini-profile .mp-steep span { font-weight:700; color:var(--gt-text); }
 
 /* ══════════════════════════════════════════════════
    PROFIL DE COURSE, style UTMB

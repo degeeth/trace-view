@@ -265,6 +265,45 @@ class ElevationFixes(unittest.TestCase):
 
 
 
+class SteepestSection(unittest.TestCase):
+    """Passage le plus raide d'une côte : pente maximale sur 100 m (maxPct) et son km de début (maxKm)."""
+
+    @staticmethod
+    def track(length, spacing, slope_at):
+        """Points espacés de `spacing` m ; altitude intégrée de la pente slope_at(d) (en fraction)."""
+        pts, elev, ele = [], [], 100.0
+        for k in range(int(length / spacing) + 1):
+            d = k * spacing
+            if k:
+                ele += slope_at(d - spacing / 2) * spacing
+            pts.append({'lat': 0, 'lon': 0, 'ele': ele, 'dist': float(d)})
+            elev.append(ele)
+        return pts, elev
+
+    def test_steep_100_m_in_a_climb(self):
+        # 1 km à 5 %, sauf 30 % de 400 à 500 m
+        pts, elev = self.track(1000, 50, lambda d: 0.30 if 400 <= d < 500 else 0.05)
+        [climb] = bc.find_climbs(pts, elev, 300, 8)
+        self.assertEqual(climb['pct'], 7.5)
+        self.assertEqual((climb['maxPct'], climb['maxKm']), (30.0, 0.4))
+
+    def test_dense_points(self):
+        # 2 km, un point tous les 2 m (1 001 points) : 8 %, sauf 25 % de 1 234 à 1 334 m
+        pts, elev = self.track(2000, 2, lambda d: 0.25 if 1234 <= d < 1334 else 0.08)
+        self.assertEqual(bc.steepest_section(pts, elev, 0, len(pts) - 1), {'maxPct': 25.0, 'maxKm': 1.23})
+
+    def test_window_between_sparse_points(self):
+        # Points tous les 60 m, 40 % entre 300 et 360 m, 5 % ailleurs : la meilleure fenêtre de 100 m prend les
+        # 60 m raides et 40 m voisins (26 %), pas deux segments entiers (120 m, 22,5 %)
+        pts, elev = self.track(1200, 60, lambda d: 0.40 if 300 <= d < 360 else 0.05)
+        result = bc.steepest_section(pts, elev, 0, len(pts) - 1)
+        self.assertEqual(result['maxPct'], 26.0)
+        self.assertTrue(0.26 <= result['maxKm'] <= 0.30, result)
+
+    def test_window_length_constant(self):
+        self.assertEqual(bc.STEEPEST_WINDOW, 100)
+
+
 class TimeBarriers(unittest.TestCase):
     """Départ, barrières horaires des ravitaillements et de l'arrivée (course.json)."""
 

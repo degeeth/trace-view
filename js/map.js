@@ -5,6 +5,7 @@ import { MAP_STYLES, zoomWidth } from './map-styles.js';
 import { PEAK_ICON } from './style-sentiers.js';
 import { MAP_CONFIG } from './config.js';
 import { CAT_COLORS, slopeColor, brandIconSvg, brandIconImage, brandIconColor, aidDetailsHtml, aidLegsHtml, escapeHtml, fmtClock } from './race.js';
+import { steepText } from './race.js';
 import { icon } from './icons.js';
 
 // Relief : Terrarium AWS (standard, zoom 14) ou Mapterhorn (qualité haute, zoom 17 : rochers, crêtes, ravins nets)
@@ -214,7 +215,7 @@ export function createMap(race, { container }) {
     type: 'FeatureCollection',
     features: colored.map(c => ({
       type: 'Feature',
-      properties: { num: c.num, color: CAT_COLORS[c.cat], label: `#${c.num} · +${c.dplus} m · ${c.pct.toFixed(1)} %` },
+      properties: { num: c.num, color: CAT_COLORS[c.cat], label: `#${c.num} · +${c.dplus} m · ${c.pct.toFixed(1)} %`, steep: steepText(c) },
       geometry: { type: 'Point', coordinates: race.lngLat[c.endIdx] }
     }))
   };
@@ -702,7 +703,7 @@ export function createMap(race, { container }) {
   const badgeTip = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 14 });
   map.on('mouseenter', 'badges-circle', e => {
     const f = e.features[0];
-    badgeTip.setLngLat(f.geometry.coordinates).setHTML(`<b>Côte ${f.properties.label}</b>`).addTo(map);
+    badgeTip.setLngLat(f.geometry.coordinates).setHTML(`<b>Côte ${f.properties.label}</b><br>Plus raide : ${f.properties.steep}`).addTo(map);
   });
   map.on('mouseleave', 'badges-circle', () => badgeTip.remove());
   map.on('click', 'aid-circle', e => {

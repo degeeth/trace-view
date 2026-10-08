@@ -1069,3 +1069,25 @@ README, skill
   sur les pastilles blanches)
 - Crédits de la carte raccourcis (« Relief : Mapzen », « Courbes : Copernicus DEM © DLR, Airbus DS (UE, ESA) », avec
   liens) : ils couvraient trois lignes du bas de la carte
+
+---
+
+## 58. Passage le plus raide de chaque côte
+
+**Fichiers** : `scripts/build_course.py`, `tests/test_build_course.py`, `data/*.json`, `js/race.js`, `js/table.js`,
+`js/map.js`, `js/chart.js`, `index.html`, `style.css`, `tests/smoke.mjs`, `README.md`
+
+- Chaque côte porte son passage le plus raide : `maxPct` (pente maximale sur 100 m, altitude lissée) et `maxKm` (km
+  du début de ces 100 m). Fenêtre glissante à deux pointeurs, altitude interpolée entre les points (le maximum est
+  exact, même entre deux points espacés), en temps linéaire (Ohm Trail, 18 322 points : 40 ms pour ses 16 côtes) ; longueur réglée
+  par `STEEPEST_WINDOW` (100 m)
+- Tableau : colonne « Plus raide » (ex. « 28 % · km 3,2 »), pente en gras dans la couleur de sa classe, triable ;
+  masquée sur mobile, et sur un ordinateur de moins de 1 680 px elle prend la place de « Km arrivée » (départ +
+  distance, rappelé au survol) pour éviter le défilement horizontal
+- Mini-profil au survol : ligne « Plus raide : 28 % sur 100 m au km 3,2 » et trait plus épais sur ce passage
+- Carte : l'info-bulle des pastilles de côtes donne aussi le passage le plus raide
+- Profil, côte sélectionnée : bande plus soutenue (couleur de la pente) sur les 100 m les plus raides et, en gros
+  plan, étiquette « 28 % sur 100 m » dans le style du point culminant ; l'en-tête du profil ajoute « plus raide
+  28 % » (sur mobile, à la place des km de la côte, pour tenir sur une ligne)
+- Toutes les courses reconstruites (seuls les nouveaux champs changent) ; 4 tests unitaires et une vérification du
+  test de fumée (colonne remplie, au moins la pente moyenne)

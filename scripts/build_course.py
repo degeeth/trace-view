@@ -42,6 +42,7 @@ import xml.etree.ElementTree as ET
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_DETECTION = {'minClimbLength': 300, 'noiseTolerance': 8, 'smoothWindow': 5}
+STEEPEST_WINDOW = 100      # m : longueur du passage le plus raide d'une côte (maxPct, maxKm)
 AID_KM_TOLERANCE = 0.3     # km : écart toléré entre le km annoncé et la position projetée
 AID_OFF_TRACK = 200        # m : au-delà, le ravitaillement est signalé hors du tracé
 SUPPLY_CATEGORIES = ('liquide', 'solide', 'chaud', 'autre')
@@ -277,9 +278,53 @@ def find_climbs(points, elev, min_length, noise_tol):
                 'pct': pct,
                 'altStart': round(start_ele),
                 'altTop': round(elev[peak_idx]),
+                **steepest_section(points, elev, start_idx, peak_idx),
             })
         i = peak_idx + 1
     return climbs
+
+
+def steepest_section(points, elev, i0, i1, window=STEEPEST_WINDOW):
+    """Passage le plus raide de la côte i0 → i1 : pente moyenne maximale sur `window` m (altitude lissée).
+
+    L'altitude est interpolée linéairement entre les points : la pente d'une fenêtre glissante est alors une
+    fonction affine par morceaux de sa position, dont le maximum tombe quand le début ou la fin de la fenêtre est
+    sur un point. Deux passes à deux pointeurs (début sur un point, puis fin sur un point) : O(n).
+    Renvoie {'maxPct': pente en %, 'maxKm': km du début de ce passage}.
+    """
+    dist = [points[k]['dist'] for k in range(i0, i1 + 1)]
+    ele = elev[i0:i1 + 1]
+    n = len(dist)
+    total = dist[-1] - dist[0]
+    if total <= window:                       # côte plus courte que la fenêtre : sa pente moyenne
+        best = ((ele[-1] - ele[0]) / total if total > 0 else 0.0, dist[0])
+        return {'maxPct': round(best[0] * 100, 1), 'maxKm': round(best[1] / 1000, 2)}
+
+    def ele_at(x, j):
+        """Altitude à la distance x, avec dist[j - 1] <= x <= dist[j]."""
+        span = dist[j] - dist[j - 1]
+        return ele[j] if span <= 0 else ele[j - 1] + (ele[j] - ele[j - 1]) * (x - dist[j - 1]) / span
+
+    best = (-math.inf, dist[0])
+    # Début de la fenêtre sur un point
+    j = 1
+    for i in range(n):
+        end = dist[i] + window
+        if end > dist[-1]:
+            break
+        while dist[j] < end:
+            j += 1
+        best = max(best, ((ele_at(end, j) - ele[i]) / window, dist[i]), key=lambda b: b[0])
+    # Fin de la fenêtre sur un point
+    i = 1
+    for j in range(n):
+        start = dist[j] - window
+        if start < dist[0]:
+            continue
+        while dist[i] < start:
+            i += 1
+        best = max(best, ((ele[j] - ele_at(start, i)) / window, start), key=lambda b: b[0])
+    return {'maxPct': round(best[0] * 100, 1), 'maxKm': round(best[1] / 1000, 2)}
 
 
 def category(pct):

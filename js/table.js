@@ -2,7 +2,7 @@
 // Un seul tableau pour ordinateur et mobile ; sur mobile, le CSS masque
 // les colonnes secondaires (classe .col-opt).
 import { on, emit } from './bus.js';
-import { CAT_COLORS, CAT_LABELS, CAT_SHORT } from './race.js';
+import { CAT_COLORS, CAT_LABELS, CAT_SHORT, slopeColor, fmtSteepPct, fmtSteepKm, steepText, STEEPEST_WINDOW_KM } from './race.js';
 import { icon } from './icons.js';
 
 const CATS = ['vert', 'orange', 'rouge', 'blanc'];
@@ -22,9 +22,10 @@ export function createTable(race, { tbody, thead, filterBar, noResult, countInfo
     tr.innerHTML = `
       <td>${c.num}</td>
       <td>${c.startKm.toFixed(2)} km</td>
-      <td class="col-opt">${c.endKm.toFixed(2)} km</td>
+      <td class="col-opt col-end">${c.endKm.toFixed(2)} km</td>
       <td>${c.length} m</td>
       <td class="cell-cat cell-${c.cat}">+${c.dplus} m&nbsp; (${c.pct.toFixed(1)} %)</td>
+      <td class="col-opt cell-steep" title="Passage le plus raide : ${steepText(c)}"><span class="steep-pct" style="--steep:${slopeColor(c.maxPct)}">${fmtSteepPct(c)}</span> · km ${fmtSteepKm(c)}</td>
       <td class="col-opt">${c.altStart} m</td>
       <td>${c.altTop} m</td>`;
     tr.addEventListener('click', () => emit('climb:select', selectedNum === c.num ? null : c));
@@ -68,7 +69,7 @@ export function createTable(race, { tbody, thead, filterBar, noResult, countInfo
   }
 
   // ── Tri ──
-  const sortValue = { num: c => c.num, dist: c => c.length, deni: c => c.dplus };
+  const sortValue = { num: c => c.num, dist: c => c.length, deni: c => c.dplus, steep: c => c.maxPct };
   thead.querySelectorAll('th.sortable').forEach(th => th.addEventListener('click', () => {
     const col = th.dataset.col;
     sort.dir = sort.col === col ? -sort.dir : 1;
@@ -89,7 +90,7 @@ export function createTable(race, { tbody, thead, filterBar, noResult, countInfo
   function placeMini(x, y) {
     let lx = x + 18, ly = y - 20;
     if (lx + 230 > window.innerWidth) lx = x - 238;
-    if (ly + 160 > window.innerHeight) ly = y - 155;
+    if (ly + 175 > window.innerHeight) ly = y - 170;
     miniProfile.style.left = lx + 'px';
     miniProfile.style.top = ly + 'px';
   }
@@ -101,11 +102,15 @@ export function createTable(race, { tbody, thead, filterBar, noResult, countInfo
     miniProfile.querySelector('[data-mp=deni]').textContent = '+' + c.dplus + ' m';
     miniProfile.querySelector('[data-mp=pct]').textContent = c.pct.toFixed(1) + ' %';
     miniProfile.querySelector('[data-mp=top]').textContent = c.altTop + ' m';
+    miniProfile.querySelector('[data-mp=steep]').textContent = steepText(c);
+    // Passage le plus raide : trait plus épais sur le mini-profil
+    const steep = i => race.dist[c.startIdx + i] >= c.maxKm - 1e-6 && race.dist[c.startIdx + i] < c.maxKm + STEEPEST_WINDOW_KM;
     mpChart?.destroy();
     mpChart = new Chart(miniProfile.querySelector('canvas').getContext('2d'), {
       type: 'line',
       data: { labels: pts.map((_, i) => i), datasets: [{ data: pts, borderColor: color, borderWidth: 1.5,
-        backgroundColor: color + '22', fill: true, pointRadius: 0, tension: 0.3 }] },
+        backgroundColor: color + '22', fill: true, pointRadius: 0, tension: 0.3,
+        segment: { borderWidth: s => steep(s.p0DataIndex) ? 3.5 : 1.5 } }] },
       options: { responsive: false, animation: false,
         plugins: { legend: { display: false }, tooltip: { enabled: false } },
         scales: { x: { display: false }, y: { display: false, min: Math.min(...pts) - 5, max: Math.max(...pts) + 5 } } }
