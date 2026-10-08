@@ -1081,13 +1081,11 @@ README, skill
   du début de ces 100 m). Fenêtre glissante à deux pointeurs, altitude interpolée entre les points (le maximum est
   exact, même entre deux points espacés), en temps linéaire (Ohm Trail, 18 322 points : 40 ms pour ses 16 côtes) ; longueur réglée
   par `STEEPEST_WINDOW` (100 m)
-- Tableau : colonne « Plus raide » (ex. « 28 % · km 3,2 »), pente en gras dans la couleur de sa classe, triable ;
-  masquée sur mobile, et sur un ordinateur de moins de 1 680 px elle prend la place de « Km arrivée » (départ +
-  distance, rappelé au survol) pour éviter le défilement horizontal
-- Mini-profil au survol : ligne « Plus raide : 28 % sur 100 m au km 3,2 » et trait plus épais sur ce passage
+- Aperçu au survol d'une ligne du tableau (mini-profil) : ligne « Plus raide : 28 % sur 100 m au km 3,2 » et trait
+  plus épais sur ce passage ; pas de colonne dans le tableau (choix de l'utilisateur)
 - Carte : l'info-bulle des pastilles de côtes donne aussi le passage le plus raide
 - Profil, côte sélectionnée : bande plus soutenue (couleur de la pente) sur les 100 m les plus raides et, en gros
   plan, étiquette « 28 % sur 100 m » dans le style du point culminant ; l'en-tête du profil ajoute « plus raide
   28 % » (sur mobile, à la place des km de la côte, pour tenir sur une ligne)
 - Toutes les courses reconstruites (seuls les nouveaux champs changent) ; 4 tests unitaires et une vérification du
-  test de fumée (colonne remplie, au moins la pente moyenne)
+  test de fumée (aperçu au survol, valeurs cohérentes avec la côte)

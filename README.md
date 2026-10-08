@@ -7,11 +7,10 @@ Course de référence : **La Grande Ourthe 100km** (100,2 km, +3 408 m, 44 côte
 
 ## Fonctionnalités
 
-- **Tableau des côtes** : distance, dénivelé, pente moyenne, passage le plus raide (pente sur 100 m et son km),
-  altitudes ; filtres par catégorie, tri, mini-profil au survol.
-- **Passage le plus raide** de chaque côte (ex. « 12,0 % de moyenne, mais 28 % sur 100 m au km 3,2 ») : colonne
-  « Plus raide » du tableau (masquée sur mobile ; sur un ordinateur de moins de 1 680 px, elle prend la place de
-  « Km arrivée »), mini-profil, info-bulle des pastilles de la carte, bande et étiquette sur le profil zoomé de la
+- **Tableau des côtes** : distance, dénivelé, pente moyenne, altitudes ; filtres par catégorie, tri, mini-profil
+  au survol (avec le passage le plus raide).
+- **Passage le plus raide** de chaque côte (ex. « 12,0 % de moyenne, mais 28 % sur 100 m au km 3,2 ») : aperçu au
+  survol d'une ligne du tableau (mini-profil), info-bulle des pastilles de la carte, bande et étiquette sur le profil zoomé de la
   côte sélectionnée, en-tête du profil.
 - **Carte** (MapLibre) en **2D ou 3D** avec relief : tracé, côtes colorées, bornes kilométriques, flèches de
   direction, ravitaillements, fonds de carte au choix, dont **Sentiers** (par défaut, conçu pour le trail : sentiers en terre, chemins,
@@ -304,7 +303,7 @@ npm run test:smoke -- --course <id>        # sur une course précise
 ```
 
 Le test de fumée utilise Chrome installé sur la machine (chemin macOS par défaut, sinon variable `CHROME_PATH`).
-Il vérifie notamment : tableau (dont la colonne « Plus raide »), modes du tracé, curseur, sélection et zoom du profil, 3D, changements de fond,
+Il vérifie notamment : tableau (et passage le plus raide dans l'aperçu au survol), modes du tracé, curseur, sélection et zoom du profil, 3D, changements de fond,
 lien partagé, page d'accueil (tuiles, ouverture d'un parcours) et lien de retour, cohérence du D+, affichage mobile,
 absence d'erreur JavaScript.
 

@@ -2,7 +2,7 @@
 // Un seul tableau pour ordinateur et mobile ; sur mobile, le CSS masque
 // les colonnes secondaires (classe .col-opt).
 import { on, emit } from './bus.js';
-import { CAT_COLORS, CAT_LABELS, CAT_SHORT, slopeColor, fmtSteepPct, fmtSteepKm, steepText, STEEPEST_WINDOW_KM } from './race.js';
+import { CAT_COLORS, CAT_LABELS, CAT_SHORT, steepText, STEEPEST_WINDOW_KM } from './race.js';
 import { icon } from './icons.js';
 
 const CATS = ['vert', 'orange', 'rouge', 'blanc'];
@@ -22,10 +22,9 @@ export function createTable(race, { tbody, thead, filterBar, noResult, countInfo
     tr.innerHTML = `
       <td>${c.num}</td>
       <td>${c.startKm.toFixed(2)} km</td>
-      <td class="col-opt col-end">${c.endKm.toFixed(2)} km</td>
+      <td class="col-opt">${c.endKm.toFixed(2)} km</td>
       <td>${c.length} m</td>
       <td class="cell-cat cell-${c.cat}">+${c.dplus} m&nbsp; (${c.pct.toFixed(1)} %)</td>
-      <td class="col-opt cell-steep" title="Passage le plus raide : ${steepText(c)}"><span class="steep-pct" style="--steep:${slopeColor(c.maxPct)}">${fmtSteepPct(c)}</span> · km ${fmtSteepKm(c)}</td>
       <td class="col-opt">${c.altStart} m</td>
       <td>${c.altTop} m</td>`;
     tr.addEventListener('click', () => emit('climb:select', selectedNum === c.num ? null : c));
@@ -69,7 +68,7 @@ export function createTable(race, { tbody, thead, filterBar, noResult, countInfo
   }
 
   // ── Tri ──
-  const sortValue = { num: c => c.num, dist: c => c.length, deni: c => c.dplus, steep: c => c.maxPct };
+  const sortValue = { num: c => c.num, dist: c => c.length, deni: c => c.dplus };
   thead.querySelectorAll('th.sortable').forEach(th => th.addEventListener('click', () => {
     const col = th.dataset.col;
     sort.dir = sort.col === col ? -sort.dir : 1;
