@@ -210,7 +210,7 @@ export function createChart(race, { canvas, wrap, rvBar, infoEl, resetBtn }) {
       plugins: { legend: { display: false }, tooltip: { enabled: false, external: tooltip } },
       scales: {
         x: { type: 'linear', min: 0, max: race.totalKm,
-             title: { display: true, text: 'Distance (km)', font: { size: 10 } },
+             // pas de titre « Distance (km) » : les graduations l'indiquent, et la courbe garde la hauteur du mode Ravitaillements
              ticks: { maxTicksLimit: 10, callback: v => +v.toFixed(2) + ' km', font: { size: 10 } } },
         y: { grace: '14%', title: { display: true, text: 'Altitude (m)', font: { size: 10 } },
              ticks: { callback: v => v + ' m', font: { size: 10 } } }
@@ -264,7 +264,10 @@ export function createChart(race, { canvas, wrap, rvBar, infoEl, resetBtn }) {
       ds.backgroundColor = hexAlpha(traceColor, 0.12);
     }
     const isAid = traceMode === 'ravitaillements';
-    chart.options.scales.x.display = !isAid;
+    // Mode Ravitaillements : l'axe des distances garde sa place (graduations invisibles) et la barre des
+    // ravitaillements s'y superpose : la courbe a exactement la même hauteur dans les trois modes
+    chart.options.scales.x.ticks.color = isAid ? 'transparent' : undefined;
+    chart.options.scales.x.grid.display = !isAid;   // pas de quadrillage tous les 10 km : les ravitos ont leurs lignes
     wrap.classList.toggle('rv-mode', isAid);
     applyView();   // la barre des ravitaillements suppose le profil complet
     rvBar.style.display = isAid ? 'block' : 'none';

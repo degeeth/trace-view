@@ -1032,3 +1032,15 @@ README, skill
   faible des deux échantillons voisins ; travail en tranches de 8 ms qui rendent la main au navigateur (au plus
   24 ms mesurés) ; jamais pendant un mouvement de carte ; une mesure en cours va jusqu'au bout puis se relance
   une fois si on l'a redemandée (l'abandonner à chaque tuile de relief l'empêchait de finir)
+
+---
+
+## 56. Profils Côtes et Pente harmonisés sur Ravitaillements
+
+**Fichiers** : `js/chart.js`, `style.css`, `index.html`
+
+- Titre « Distance (km) » retiré (les graduations l'indiquent) : la courbe gagne 20 px
+- Mode Ravitaillements : l'axe des distances garde sa place (graduations invisibles, sans quadrillage) et la barre
+  des ravitaillements s'y superpose au lieu de prendre de la hauteur à la courbe
+- Mesuré : courbe de 170 px dans les trois modes sur ordinateur (150 avant), 90 px sur mobile (70 avant) ; barre à
+  5 px sous la courbe, sans la recouvrir

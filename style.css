@@ -560,7 +560,7 @@ tbody tr.hidden { display: none; }
   position: relative;
 }
 #altChart { position: absolute; inset: 10px 14px 12px; width: calc(100% - 28px) !important; height: calc(100% - 22px) !important; }
-.chart-wrap.rv-mode #altChart { bottom: 0; height: calc(100% - 10px) !important; }
+
 
 /* Info-bulle du profil */
 .altchart-tooltip { position: absolute; pointer-events: none; z-index: 200; transition: opacity .1s; opacity: 0; }
@@ -597,6 +597,7 @@ tbody tr.hidden { display: none; }
 .chart-card {
   flex: 35;
   min-height: 0;
+  position: relative;   /* barre des ravitaillements posée sur l'axe des distances */
   display: flex;
   flex-direction: column;
   background: var(--gt-surface);
@@ -706,7 +707,8 @@ tbody tr.hidden { display: none; }
 /* Barre ravitaillements sous le profil : une ligne (point, km, nom) qui remplace l'axe des distances ; distance
    et D+ des tronçons sur la ligne des km, plus petits */
 #rv-bar {
-  padding: 0 16px 8px;
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 0 16px 4px;
   border-top: 1px solid var(--gt-border);
   background: var(--gt-surface);
   font-family: var(--gt-font);
