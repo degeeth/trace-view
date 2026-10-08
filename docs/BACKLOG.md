@@ -62,6 +62,59 @@ Passage 2D ↔ 3D : le fondu enchaîné est en place (`mode3DTransition: 'fade'`
 - Contexte de la course : date d'édition, lien vers la page officielle.
 - Option : garder les côtes colorées sur la carte en mode Ravitaillements.
 
+## Idées d'évolution, par effort
+
+Liste du 8 octobre 2026. Priorités proposées : 1) temps de passage estimés et marge sur les barrières, 2) survol 3D
+animé, 3) espace organisateur.
+
+### Simples (quelques heures à deux jours)
+
+- **Roadbook imprimable** : une page A4 (profil, tableau des côtes, ravitos, barrières) à glisser dans le sac.
+- **Temps de passage estimés** : le coureur donne son allure ou son objectif ; heure de passage à chaque ravito et
+  marge sur la barrière horaire, en tenant compte du D+ (une côte à 15 % compte plus qu'un plat).
+- **Partager une côte en image** : vignette générée (profil, D+, %, logo de l'organisation) pour les réseaux sociaux.
+- **Comparer deux distances** d'une même organisation (ex. Extratrail noir et bleu) : profils superposés, D+,
+  kilomètres les plus durs.
+- **Mode sombre**, automatique selon l'appareil.
+- **Lien « Inscription »** sur la tuile et la page du parcours, vers la billetterie de l'organisation.
+- (Déjà noté plus haut : versions néerlandaise et anglaise.)
+
+### Intermédiaires (quelques jours à deux semaines)
+
+- **Envoi du parcours sur la montre** : GPX enrichi, ravitos et côtes en points d'alerte (Garmin, Coros, Suunto) ;
+  voir « Parcours sur smartphone » plus haut.
+- **Application installable et hors connexion** : carte et parcours disponibles sans réseau.
+- **« Où suis-je ? »** : position GPS sur le tracé, km parcouru, D+ restant, distance au prochain ravito et à la
+  prochaine côte.
+- **Passage le plus raide de chaque côte** : en plus de la pente moyenne, le pourcentage maximal sur 100 m
+  (« 12 % de moyenne, 28 % sur 150 m au km 3,2 »).
+- **Survol 3D animé** du parcours (à la Relive) : caméra qui suit le tracé, profil qui défile ; argument marketing.
+- **Météo par segment le jour J** : température et vent au sommet et en vallée, coucher du soleil (frontale).
+- **Surface du sentier** sur le profil (asphalte, chemin, single), d'après OpenStreetMap.
+
+### Compliquées (plusieurs semaines)
+
+- **Espace organisateur** : dépôt du GPX, des ravitos et des barrières par l'organisation elle-même, sans le skill ;
+  s'appuie sur l'architecture ci-dessous. Base d'un produit vendable.
+- **Suivi en direct le jour de la course** : positions des coureurs sur la carte 3D (chronométrage SQMTime, balises).
+- **Analyse après course** : trace Strava du coureur comparée au parcours, côte par côte (temps perdu, vitesse
+  ascensionnelle, comparaison à la moyenne).
+- **Plan de course nutritionnel** : d'après le temps estimé et le contenu des ravitos, quoi emporter entre chacun.
+- **Comparateur de courses** : courses au profil, au D+ par km et à la technicité semblables.
+
+### Futuristes
+
+- **Prédiction personnalisée par IA** : temps par segment d'après l'historique Strava du coureur (vitesse en montée,
+  fatigue en fin de course), défaillance probable comprise.
+- **Coach vocal pendant la course** : annonce des côtes, des ravitos et de la marge sur les barrières dans les
+  écouteurs.
+- **Réalité augmentée** : tracé, côtes à venir et noms des sommets affichés sur le paysage à travers le téléphone.
+- **Jumeau numérique de la course** pour l'organisateur : simulation des coureurs avant le jour J (bouchons sur les
+  singles, ravitos saturés, passage du serre-file).
+- **Détection du terrain par photos aériennes et IA** : passages techniques (rochers, racines, gués) et zones
+  boueuses, affichés sur le profil.
+- **Visite immersive** : parcours en vue subjective 3D, photos des bénévoles géolocalisées le long du tracé.
+
 ## Architecture : application Angular + API + PostgreSQL
 
 Idée : passer du site statique (fichiers JSON générés) à une application Angular servie par une API REST,
