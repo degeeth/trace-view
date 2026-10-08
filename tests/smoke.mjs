@@ -68,6 +68,12 @@ try {
   const rows = await page.$$eval('#climbs-body tr', trs => trs.length);
   const expected = await page.evaluate(() => trace.race.climbs.length);
   check('Tableau des côtes rempli depuis les données', rows > 0 && rows === expected, `${rows} lignes`);
+  // Passage le plus raide sur 100 m (maxPct, maxKm de build_course.py) : dans l'aperçu au survol d'une ligne
+  await page.hover('#climbs-body tr:first-child');
+  const steep = await page.evaluate(() => ({
+    text: document.querySelector('#mini-profile [data-mp="steep"]').textContent.trim(),
+    data: trace.race.climbs.every(c => c.maxPct >= c.pct && c.maxKm >= c.startKm - 0.01 && c.maxKm <= c.endKm) }));
+  check('Aperçu au survol : passage le plus raide', steep.data && /\d+\s*%\s*sur\s100\sm\sau\skm\s*\d+,\d/.test(steep.text), steep.text);
   const dplus = await page.evaluate(() => ({
     header: parseInt(trace.race.race.stats.dplus.replace(/\D/g, ''), 10),
     cumul: Math.round(trace.race.cumDplus.at(-1))

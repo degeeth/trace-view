@@ -16,6 +16,13 @@ export function slopeColor(pct) {
   return '#c8c8c8';
 }
 
+// Passage le plus raide d'une côte (maxPct sur 100 m, à partir du km maxKm ; scripts/build_course.py)
+export const STEEPEST_WINDOW_KM = 0.1;
+export const fmtSteepPct = c => `${Math.round(c.maxPct)}\u202f%`;
+export const fmtSteepKm = c => c.maxKm.toLocaleString('fr-BE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+// « 28 % sur 100 m au km 3,2 »
+export const steepText = c => `${fmtSteepPct(c)} sur 100\u00a0m au km\u00a0${fmtSteepKm(c)}`;
+
 export async function loadRace(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Données de course introuvables (${url})`);

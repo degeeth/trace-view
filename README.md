@@ -7,8 +7,11 @@ Course de référence : **La Grande Ourthe 100km** (100,2 km, +3 408 m, 44 côte
 
 ## Fonctionnalités
 
-- **Tableau des côtes** : distance, dénivelé, pente moyenne, altitudes ; filtres par catégorie, tri,
-  mini-profil au survol.
+- **Tableau des côtes** : distance, dénivelé, pente moyenne, altitudes ; filtres par catégorie, tri, mini-profil
+  au survol (avec le passage le plus raide).
+- **Passage le plus raide** de chaque côte (ex. « 12,0 % de moyenne, mais 28 % sur 100 m au km 3,2 ») : aperçu au
+  survol d'une ligne du tableau (mini-profil), info-bulle des pastilles de la carte, bande et étiquette sur le profil zoomé de la
+  côte sélectionnée, en-tête du profil.
 - **Carte** (MapLibre) en **2D ou 3D** avec relief : tracé, côtes colorées, bornes kilométriques, flèches de
   direction, ravitaillements, fonds de carte au choix, dont **Sentiers** (par défaut, conçu pour le trail : sentiers en terre, chemins,
   revêtement) et le satellite avec orthophotos SPW en Wallonie.
@@ -230,6 +233,9 @@ Algorithme repris du script d'analyse d'origine (`analyze_climbs.py`, 2023), ré
 3. Une côte commence dès que l'altitude lissée monte, et se termine quand on redescend de plus de **8 m** sous
    le point le plus haut atteint (les petites descentes en pleine montée ne la coupent pas).
 4. Elle est retenue si sa longueur horizontale est d'au moins **300 m** ; sa pente moyenne = gain / longueur.
+5. Passage le plus raide : pente maximale sur une fenêtre glissante de **100 m** (`STEEPEST_WINDOW`, altitude
+   lissée interpolée entre les points), en un seul passage même sur les traces très denses. Chaque côte de
+   `data/<id>.json` porte `maxPct` (pente en %, 1 décimale) et `maxKm` (km du début de ces 100 m, 2 décimales).
 
 **Altitudes** : les chiffres affichés (D+, D−, altitudes min / max / moyenne, D+ cumulé, point culminant)
 utilisent l'altitude **brute** du GPX, comme Openrunner ; la détection, les pentes et le dessin du profil
@@ -291,13 +297,13 @@ Dans la console du navigateur, `window.trace` donne accès à la course, à la c
 ## Tests
 
 ```bash
-npm run test:build                         # 18 tests unitaires : côtes, statistiques, ravitaillements, altitudes
-npm run test:smoke                         # 24 vérifications dans Chrome headless (ordinateur + mobile)
+npm run test:build                         # 31 tests unitaires : côtes, passage le plus raide, statistiques, ravitaillements, altitudes
+npm run test:smoke                         # 32 vérifications dans Chrome headless (ordinateur + mobile)
 npm run test:smoke -- --course <id>        # sur une course précise
 ```
 
 Le test de fumée utilise Chrome installé sur la machine (chemin macOS par défaut, sinon variable `CHROME_PATH`).
-Il vérifie notamment : tableau, modes du tracé, curseur, sélection et zoom du profil, 3D, changements de fond,
+Il vérifie notamment : tableau (et passage le plus raide dans l'aperçu au survol), modes du tracé, curseur, sélection et zoom du profil, 3D, changements de fond,
 lien partagé, page d'accueil (tuiles, ouverture d'un parcours) et lien de retour, cohérence du D+, affichage mobile,
 absence d'erreur JavaScript.
 

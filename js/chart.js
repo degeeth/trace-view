@@ -2,7 +2,7 @@
 // Dessiné sur le tracé complet (tous les points GPS) pour rester précis en zoom.
 // Survoler ou glisser le doigt sur le profil déplace un curseur sur la carte.
 import { on, emit } from './bus.js';
-import { CAT_COLORS, slopeColor, brandIconBox, brandIconImage, brandIconColor, SUPPLIES, suppliesByCategory, supplyText, escapeHtml } from './race.js';
+import { CAT_COLORS, slopeColor, fmtSteepPct, STEEPEST_WINDOW_KM, brandIconBox, brandIconImage, brandIconColor, SUPPLIES, suppliesByCategory, supplyText, escapeHtml } from './race.js';
 import { icon } from './icons.js';
 
 const INK = '#04080b';
@@ -69,6 +69,10 @@ export function createChart(race, { canvas, wrap, rvBar, infoEl, resetBtn }) {
         ctx.save();
         ctx.fillStyle = hexAlpha(accent, 0.12);
         ctx.fillRect(x1, y.top, x2 - x1, y.bottom - y.top);
+        // Passage le plus raide (100 m) : bande plus soutenue, couleur de sa pente
+        const s1 = x.getPixelForValue(selected.maxKm), s2 = x.getPixelForValue(selected.maxKm + STEEPEST_WINDOW_KM);
+        ctx.fillStyle = hexAlpha(slopeColor(selected.maxPct), 0.22);
+        ctx.fillRect(s1, y.top, Math.max(2, s2 - s1), y.bottom - y.top);
         ctx.restore();
       },
       afterDatasetsDraw(chart) {
@@ -82,6 +86,22 @@ export function createChart(race, { canvas, wrap, rvBar, infoEl, resetBtn }) {
           const px = x.getPixelForValue(km);
           ctx.beginPath(); ctx.moveTo(px, y.top); ctx.lineTo(px, y.bottom); ctx.stroke();
         });
+        // Étiquette du passage le plus raide (gros plan seulement), au-dessus de la courbe, même style que le
+        // point culminant
+        if (zoomed) {
+          const area = chart.chartArea;
+          const mid = selected.maxKm + STEEPEST_WINDOW_KM / 2;
+          const label = `${fmtSteepPct(selected)} sur 100 m`;
+          ctx.setLineDash([]);
+          ctx.font = `700 10px ${getComputedStyle(document.documentElement).getPropertyValue('--gt-font')}`;
+          ctx.textAlign = 'center';
+          const half = ctx.measureText(label).width / 2 + 2;
+          const px = Math.min(Math.max(x.getPixelForValue(mid), area.left + half), area.right - half);
+          const top = Math.max(eleAtKm(selected.maxKm), eleAtKm(selected.maxKm + STEEPEST_WINDOW_KM));
+          const ly = Math.max(area.top + 12, y.getPixelForValue(top) - 12);
+          ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.fillStyle = INK;
+          ctx.strokeText(label, px, ly); ctx.fillText(label, px, ly);
+        }
         ctx.restore();
       }
     },
@@ -353,7 +373,9 @@ export function createChart(race, { canvas, wrap, rvBar, infoEl, resetBtn }) {
     selected = climb;
     applyView.full = false;   // une nouvelle côte se montre toujours en gros plan
     chart.data.datasets[1].data = climb ? points.slice(climb.startIdx, climb.endIdx + 1) : [];
-    infoEl.textContent = climb ? race.climbLabel(climb) : '';
+    // Sur mobile, les km de la côte cèdent la place à son passage le plus raide (une seule ligne)
+    infoEl.innerHTML = climb ? `Côte #${climb.num}<span class="info-range"> (${climb.startKm.toLocaleString('fr-BE')} → `
+      + `${climb.endKm.toLocaleString('fr-BE')} km)</span> · plus raide ${fmtSteepPct(climb)}` : '';
     applyView();
   });
   // Barre recalculée à chaque changement de taille du profil (fenêtre, onglet Carte affiché sur mobile, panneau,
