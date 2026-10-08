@@ -207,8 +207,9 @@ export function createMap(race, { container }) {
   }
   // Mesure différée (250 ms) après chaque mouvement et chaque tuile de relief reçue, pas pendant un mouvement ;
   // pas sur « idle », qui peut ne jamais venir tant que des tuiles se chargent en 3D
-  let steepTimer = null;
-  const scheduleSteep = () => { clearTimeout(steepTimer); steepTimer = setTimeout(() => { if (!map.isMoving()) measureSteep(); }, 250); };
+  // Ni pendant le survol 3D (js/flyover.js), dont chaque image déclenche « moveend » : mesure relancée à la fin
+  let steepTimer = null, flyover = false;
+  const scheduleSteep = () => { clearTimeout(steepTimer); if (flyover) return; steepTimer = setTimeout(() => { if (!map.isMoving()) measureSteep(); }, 250); };
   map.on('moveend', scheduleSteep);
   map.on('sourcedata', e => { if (e.sourceId === 'dem' && e.tile) scheduleSteep(); });
   const badgesGeo = {
@@ -718,7 +719,10 @@ export function createMap(race, { container }) {
   on('trace:mode', mode => { traceMode = mode; applyTraceMode(); });
   on('climb:select', climb => { selected = climb; showHighlight(!!climb); });
   on('cursor:move', km => {
-    const pos = race.lngLat[race.idxAtKm(km)];
+    // Position interpolée entre les deux points GPS qui encadrent km : le curseur glisse sans à-coups (survol 3D)
+    const i = race.idxAtKm(km), h = Math.max(0, i - 1), a = race.lngLat[h], b = race.lngLat[i];
+    const span = race.dist[i] - race.dist[h], f = span > 0 ? Math.min(1, Math.max(0, (km - race.dist[h]) / span)) : 0;
+    const pos = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
     if (!cursorMarker) {
       const el = document.createElement('div');
       el.className = 'cursor-dot';
@@ -731,6 +735,7 @@ export function createMap(race, { container }) {
     map,
     setMode3D,
     is3D: () => is3D,
+    setFlyover: active => { flyover = active; if (!active) scheduleSteep(); },
     resize: () => map.resize(),
     styleKey: () => styleKey
   };

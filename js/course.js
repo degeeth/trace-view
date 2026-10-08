@@ -4,6 +4,7 @@ import { loadRace, brandIconSvg, brandIconBox, fmtClock, fmtDuration } from './r
 import { createMap } from './map.js';
 import { createChart } from './chart.js';
 import { createTable } from './table.js';
+import { createFlyover } from './flyover.js';
 import { icon, hydrateIcons } from './icons.js';
 
 const $ = sel => document.querySelector(sel);
@@ -142,8 +143,8 @@ on('trace:mode', mode => document.querySelectorAll('.profile-tab').forEach(tab =
 emit('trace:mode', 'ravitaillements');   // profil affiché par défaut
 
 // ── 2D / 3D ──
-$('#btn-3d').addEventListener('click', async () => {
-  const btn = $('#btn-3d'), enabled = !mapApi.is3D();
+async function set3D(enabled) {
+  const btn = $('#btn-3d');
   btn.textContent = enabled ? '2D' : '3D';
   btn.classList.toggle('active', enabled);
   btn.setAttribute('aria-pressed', enabled);
@@ -151,7 +152,23 @@ $('#btn-3d').addEventListener('click', async () => {
   btn.classList.add('busy');
   try { await mapApi.setMode3D(enabled); }
   finally { btn.disabled = false; btn.classList.remove('busy'); }
-});
+}
+$('#btn-3d').addEventListener('click', () => { flyover.stop(); set3D(!mapApi.is3D()); });
+
+// ── Survol 3D (js/flyover.js) : toute la course, ou la côte sélectionnée ; le bouton devient « Arrêter » ──
+const flyoverBtn = $('#flyover-btn');
+function refreshFlyoverBtn(flying) {
+  const what = selected ? 'de la côte' : 'du parcours';
+  flyoverBtn.innerHTML = flying ? `${icon('square', 13)} <span class="btn-label">Arrêter</span>`
+    : `${icon('play', 13)} <span class="btn-label">Survol</span>`;
+  flyoverBtn.title = flying ? 'Arrêter le survol' : `Survol 3D ${what}`;
+  flyoverBtn.setAttribute('aria-label', flyoverBtn.title);
+  flyoverBtn.classList.toggle('active', flying);
+}
+const flyover = createFlyover(race, mapApi, { enter3D: () => set3D(true), onChange: refreshFlyoverBtn });
+flyoverBtn.addEventListener('click', () => flyover.isFlying() ? flyover.stop() : flyover.start(selected));
+// Choisir (ou désélectionner) une côte pendant le survol l'arrête : la carte vole vers la côte
+on('climb:select', () => { flyover.stop(); refreshFlyoverBtn(flyover.isFlying()); });
 
 // ── Téléchargement GPX ──
 $('#gpx-btn').addEventListener('click', () => {
@@ -192,4 +209,4 @@ document.querySelectorAll('.mobile-tab').forEach(t => t.addEventListener('click'
 switchTab('carte');
 
 // Exposé pour le test de fumée et le débogage dans la console
-window.trace = { race, map: mapApi.map, mapApi, chart, emit, get selected() { return selected; } };
+window.trace = { race, map: mapApi.map, mapApi, chart, emit, flyover, get selected() { return selected; } };
