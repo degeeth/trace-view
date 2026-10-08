@@ -281,7 +281,7 @@ sequenceDiagram
 | Coordonnées des courbes arrondies à 5 décimales (≈ 1 m) | fichiers divisés par 2 environ ; zone limitée au parcours + 2 km |
 | Courbes maîtresses absentes du fichier des courbes fines | pas de double dessin |
 | Tracé en tronçons : un tronçon par changement de couleur (mode Pente) ou de facteur de largeur (arrondi à 0,1) | ~230 tronçons au lieu d'un par point |
-| Pente du relief en travers du tracé mesurée 250 ms après un mouvement ou une tuile de relief, seulement pour les points visibles et quand le zoom augmente | pas de calcul à chaque image |
+| Pente du relief en travers du tracé mesurée 250 ms après un mouvement ou une tuile de relief (jamais pendant un mouvement), sur un point tous les 15 m (pas sur chaque point GPS), seulement pour les points visibles et quand le zoom augmente, en tranches de 8 ms qui rendent la main au navigateur | Ohm Trail (18 322 points) : blocage de 8 s au passage en 3D supprimé, tranches de 24 ms au plus |
 | `DEM` en `tileSize: 256` (taille réelle des tuiles Terrarium) | relief à la bonne résolution (512 chargeait un zoom trop bas) |
 | Orthophotos SPW demandées en 512 px pour des tuiles 256 | net sur écran Retina |
 | Libellés et pastilles en couches `symbol`/`circle` (GPU) plutôt qu'en marqueurs DOM | fluide malgré des centaines d'éléments |

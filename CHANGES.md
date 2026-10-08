@@ -1018,3 +1018,17 @@ README, skill
 - Fond uni et pastille « Chargement… » à la place ; venant de la page d'accueil, la pastille de la tuile
   (« Chargement de Ohm Trail 2018… ») continue sans délai ni changement de texte
 - Sécurité : page affichée au bout de 20 s si la carte ne se charge pas ; affichée aussitôt en cas d'erreur
+
+---
+
+## 55. 3D fluide sur les traces très denses (Ohm Trail)
+
+**Fichiers** : `js/map.js`, `index.html`, `docs/CARTOGRAPHIE.md`
+
+- La mesure de la pente du relief en travers du tracé (amincissement sur les parois, #48) interrogeait le relief
+  pour chacun des 18 322 points de l'Ohm Trail (un par seconde d'enregistrement) d'un seul bloc : page figée
+  8 s au passage en 3D et pendant les zooms (mesuré dans le navigateur de test, 0,2 s sur l'HRP 11)
+- Désormais : un point mesuré tous les 15 m (≈ 2 300 au lieu de 18 322), les autres prennent la valeur la plus
+  faible des deux échantillons voisins ; travail en tranches de 8 ms qui rendent la main au navigateur (au plus
+  24 ms mesurés) ; jamais pendant un mouvement de carte ; une mesure en cours va jusqu'au bout puis se relance
+  une fois si on l'a redemandée (l'abandonner à chaque tuile de relief l'empêchait de finir)

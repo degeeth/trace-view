@@ -114,7 +114,6 @@ export function createMap(race, { container }) {
   // steepMinWidth), mesurée sur le relief affiché (exagération comprise) à mesure que les tuiles arrivent.
   const nPts = race.lngLat.length;
   const steep = new Float32Array(nPts).fill(1);        // facteur de largeur par point
-  const steepZoom = new Float32Array(nPts).fill(-1);   // zoom de la mesure (-1 : pas encore mesuré)
   let steepExag = null;
   const widthAt = i => is3D && C.steepSlopeCompensation
     ? Math.round(Math.min(steep[i], steep[Math.min(i + 1, nPts - 1)]) * 10) / 10 : 1;
@@ -145,36 +144,70 @@ export function createMap(race, { container }) {
     map.getSource('climb-hl')?.setData(highlightData());
   }
 
-  // Pente du relief en travers du tracé, de part et d'autre de chaque point (steepSampleDistance) ; remesurée quand
-  // on zoome (tuiles de relief plus fines) pour les points visibles
+  // Pente du relief en travers du tracé, de part et d'autre du tracé (steepSampleDistance) ; remesurée quand on
+  // zoome (tuiles de relief plus fines) pour les points visibles. Mesurée sur un point tous les steepSampleDistance
+  // mètres (pas sur chaque point GPS : 18 000 points pour un enregistrement à la seconde), les points entre deux
+  // échantillons prenant la valeur la plus faible des deux ; travail découpé en tranches de 8 ms qui rendent la main au
+  // navigateur, pour ne jamais figer le zoom ni l'animation. Une mesure en cours va jusqu'au bout (les tuiles de relief arrivent
+  // en continu : l'abandonner à chaque tuile l'empêcherait de finir) puis se relance une fois si on l'a redemandée.
+  const steepSamples = (() => {
+    const out = [0];
+    for (let i = 1; i < nPts; i++) if ((race.dist[i] - race.dist[out.at(-1)]) * 1000 >= C.steepSampleDistance) out.push(i);
+    if (out.at(-1) !== nPts - 1) out.push(nPts - 1);
+    return out;
+  })();
+  const sampleSteep = new Float32Array(steepSamples.length).fill(1);
+  const sampleZoom = new Float32Array(steepSamples.length).fill(-1);
+  let steepBusy = false, steepAgain = false;
   function measureSteep() {
     if (!is3D || !C.steepSlopeCompensation || !map.getTerrain()) return;
+    if (steepBusy) { steepAgain = true; return; }
+    steepBusy = true;
     const exag = map.getTerrain().exaggeration;
-    if (exag !== steepExag) { steepZoom.fill(-1); steepExag = exag; }
+    if (exag !== steepExag) { sampleZoom.fill(-1); steepExag = exag; }
     const zoom = Math.floor(map.getZoom()), bounds = map.getBounds(), d = C.steepSampleDistance;
-    let changed = false;
-    for (let i = 0; i < nPts; i++) {
-      if (steepZoom[i] >= zoom) continue;
-      const [lng, lat] = race.lngLat[i];
-      if (steepZoom[i] >= 0 && !bounds.contains([lng, lat])) continue;
-      const a = race.lngLat[Math.max(0, i - 1)], b = race.lngLat[Math.min(nPts - 1, i + 1)];
-      const kx = 111320 * Math.cos(lat * Math.PI / 180), ky = 110540;
-      const dx = (b[0] - a[0]) * kx, dy = (b[1] - a[1]) * ky, len = Math.hypot(dx, dy) || 1;
-      const ox = -dy / len * d / kx, oy = dx / len * d / ky;   // perpendiculaire au tracé, en degrés
-      const left = map.queryTerrainElevation([lng + ox, lat + oy]);
-      const right = map.queryTerrainElevation([lng - ox, lat - oy]);
-      if (left == null || right == null) continue;
-      const f = Math.max(C.steepMinWidth, Math.cos(Math.atan(Math.abs(left - right) / (2 * d))));
-      if (Math.abs(f - steep[i]) >= 0.05) changed = true;
-      steep[i] = f;
-      steepZoom[i] = zoom;
-    }
-    if (changed) refreshTraceData();
+    let k = 0, changed = false;
+    const finish = () => {
+      steepBusy = false;
+      if (steepAgain) { steepAgain = false; scheduleSteep(); }
+    };
+    const slice = () => {
+      if (!is3D) { finish(); return; }                 // retour en 2D : arrêt
+      const until = performance.now() + 8;
+      for (; k < steepSamples.length && performance.now() < until; k++) {
+        if (sampleZoom[k] >= zoom) continue;
+        const i = steepSamples[k];
+        const [lng, lat] = race.lngLat[i];
+        if (sampleZoom[k] >= 0 && !bounds.contains([lng, lat])) continue;
+        const a = race.lngLat[steepSamples[Math.max(0, k - 1)]], b = race.lngLat[steepSamples[Math.min(steepSamples.length - 1, k + 1)]];
+        const kx = 111320 * Math.cos(lat * Math.PI / 180), ky = 110540;
+        const dx = (b[0] - a[0]) * kx, dy = (b[1] - a[1]) * ky, len = Math.hypot(dx, dy) || 1;
+        const ox = -dy / len * d / kx, oy = dx / len * d / ky;   // perpendiculaire au tracé, en degrés
+        const left = map.queryTerrainElevation([lng + ox, lat + oy]);
+        const right = map.queryTerrainElevation([lng - ox, lat - oy]);
+        if (left == null || right == null) continue;
+        const f = Math.max(C.steepMinWidth, Math.cos(Math.atan(Math.abs(left - right) / (2 * d))));
+        if (Math.abs(f - sampleSteep[k]) >= 0.05) changed = true;
+        sampleSteep[k] = f;
+        sampleZoom[k] = zoom;
+      }
+      if (k < steepSamples.length) { setTimeout(slice, 0); return; }   // rend la main (rendu, zoom), sans attendre une image
+      if (!changed) { finish(); return; }
+      // Report sur tous les points : valeur la plus faible des deux échantillons qui les encadrent
+      for (let s = 0; s < steepSamples.length - 1; s++) {
+        const f = Math.min(sampleSteep[s], sampleSteep[s + 1]);
+        for (let i = steepSamples[s]; i < steepSamples[s + 1]; i++) steep[i] = f;
+      }
+      steep[nPts - 1] = sampleSteep.at(-1);
+      refreshTraceData();
+      finish();
+    };
+    slice();
   }
-  // Mesure différée (250 ms) après chaque mouvement et chaque tuile de relief reçue ; pas sur « idle », qui peut
-  // ne jamais venir tant que des tuiles se chargent en 3D
+  // Mesure différée (250 ms) après chaque mouvement et chaque tuile de relief reçue, pas pendant un mouvement ;
+  // pas sur « idle », qui peut ne jamais venir tant que des tuiles se chargent en 3D
   let steepTimer = null;
-  const scheduleSteep = () => { clearTimeout(steepTimer); steepTimer = setTimeout(measureSteep, 250); };
+  const scheduleSteep = () => { clearTimeout(steepTimer); steepTimer = setTimeout(() => { if (!map.isMoving()) measureSteep(); }, 250); };
   map.on('moveend', scheduleSteep);
   map.on('sourcedata', e => { if (e.sourceId === 'dem' && e.tile) scheduleSteep(); });
   const badgesGeo = {
