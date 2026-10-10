@@ -64,8 +64,8 @@ Passage 2D ↔ 3D : le fondu enchaîné est en place (`mode3DTransition: 'fade'`
 
 ## Idées d'évolution, par effort
 
-Liste du 8 octobre 2026. Priorités proposées : 1) temps de passage estimés et marge sur les barrières, 2) survol 3D
-animé, 3) espace organisateur.
+Liste du 8 octobre 2026. Priorités proposées : 1) temps de passage estimés et marge sur les barrières, 2) espace
+organisateur (le survol 3D et le passage le plus raide sont faits).
 
 ### Simples (quelques heures à deux jours)
 
@@ -86,9 +86,8 @@ animé, 3) espace organisateur.
 - **Application installable et hors connexion** : carte et parcours disponibles sans réseau.
 - **« Où suis-je ? »** : position GPS sur le tracé, km parcouru, D+ restant, distance au prochain ravito et à la
   prochaine côte.
-- **Passage le plus raide de chaque côte** : en plus de la pente moyenne, le pourcentage maximal sur 100 m
-  (« 12 % de moyenne, 28 % sur 150 m au km 3,2 »).
-- **Survol 3D animé** du parcours (à la Relive) : caméra qui suit le tracé, profil qui défile ; argument marketing.
+- ~~**Passage le plus raide de chaque côte**~~ : fait (CHANGES #58), dans l'aperçu au survol, la carte et le profil.
+- ~~**Survol 3D animé**~~ : fait (CHANGES #59), bouton « Survol » ; réglages de caméra à valider sur un vrai écran.
 - **Météo par segment le jour J** : température et vent au sommet et en vallée, coucher du soleil (frontale).
 - **Surface du sentier** sur le profil (asphalte, chemin, single), d'après OpenStreetMap.
 
